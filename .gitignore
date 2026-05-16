@@ -216,3 +216,35 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ----- 项目自定义补充 -----
+
+# macOS 系统文件
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code 本地设置（每个团队成员的本地覆盖，不应共享）
+.claude/settings.local.json
+.claude/local/
+
+# 密钥 / 环境变量（防止误提交）
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# 本地实验目录（团队约定：放临时脚本/笔记的地方）
+_local/
+_scratch/
+
+# Node（万一前端工具链进来）
+node_modules/
