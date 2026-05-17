@@ -5,16 +5,21 @@
 
 ---
 
-## 0. 验收的 4 层防线
+## 0. 验收的 4 层防线（实际只有 3 层强制 + 1 层约定）
 
 | 层 | 何时触发 | 在哪跑 | 谁能绕过 |
 |---|---|---|---|
 | **1. 本地 pre-commit hooks** | 每次 `git commit` 前 | 你的电脑 | 你（用 `--no-verify`） |
 | **2. GitHub Actions checks** | 每次 push + 每次 PR | GitHub 云端 | 没人（除非删工作流） |
-| **3. Branch protection** | 想 push 到 main 时 | GitHub 仓库设置 | repo admin |
-| **4. DeepSeek AI review** | 每次 PR 打开 / 更新 | GitHub 云端 | 没人 |
+| **3. ~~Branch protection~~ 团队约定走 PR** | — | — | **任何人**（GitHub free 私有仓不强制） |
+| **4. DeepSeek AI review** | 每次 PR 打开 / 更新 | GitHub 云端 | 没人（但只在 PR 上跑——直推 main 会跳过） |
 
-层数越高保护越强但越难绕过。第 1 层是给自己看的（早期反馈），第 2–4 层是给团队看的（不可绕过的硬门槛）。
+**关于第 3 层的现实**：GitHub free plan 在**私有仓库**上**不执行** branch protection / rulesets（不论是 classic rule 还是 ruleset，都会显示 "Not enforced"，需要升级 GitHub Team / Enterprise 才生效）。我们决定走"团队约定 + Actions 兜底"路线，不为这一层付费。这意味着：
+
+- **约定**：所有改动都通过 PR 合入 main，不直接 push 到 main
+- **现实**：如果有人手抖直接 push 到 main，git 不会拦——但 Actions 仍然会跑 pre-commit 检查 + warn-on-openclaw-changes
+- **代价**：直推不会触发 DeepSeek review。所以"我直推一下没事"的代价是绕过 AI 复审
+- **何时重新评估**：如果项目获奖或长期化，再升级 Team plan
 
 ---
 
@@ -132,24 +137,13 @@ gh pr merge --squash --delete-branch
 
 下面这些事 gh CLI 用本机当前账号操作不了（账号隔离的设计后果），需要你浏览器登录 `vivianclark523-lab` 完成：
 
-### 5.1 Phase B：配置 Branch protection（强制走 PR，禁止直推 main）
+### 5.1 ~~Phase B：配置 Branch protection~~ → 已放弃，原因见第 0 节
 
-1. 打开：https://github.com/vivianclark523-lab/Yenching-MT-Hackathon/settings/branches
-2. 点 **Add classic branch protection rule**（或新版的 ruleset 也行，classic 够用）
-3. **Branch name pattern**：填 `main`
-4. 勾选以下规则：
-   - ✅ **Require a pull request before merging**
-     - 子选项 **Require approvals**：**不勾**（你们 3 人轮流就行，强制 approve 会卡住自己 PR）
-     - 子选项 **Dismiss stale pull request approvals when new commits are pushed**：**不勾**
-   - ✅ **Require status checks to pass before merging**
-     - 子选项 **Require branches to be up to date before merging**：勾上
-     - 在 search 框里搜并添加：`pre-commit hooks`（来自我们的 checks.yml）
-     - （可选）也加 `DeepSeek review`，但首次配置 secret 之前 AI review 会失败，慎勾
-   - ✅ **Require conversation resolution before merging**（PR 评论必须 resolved 才能 merge）
-   - ✅ **Do not allow bypassing the above settings**（admin 也要遵守，防自己手抖）
-5. **Save changes**
+GitHub free plan 在私有仓库下不执行 branch protection rule / ruleset。我们改走"团队约定"路线。**所有团队成员需要遵守**：
 
-完成后试着直接 push 到 main，应该被拒绝。
+- 所有改动通过 PR 合入 main，不直接 `git push origin main`
+- 例外：CI / 工作流本身的紧急修复可以直推（罕见情况）
+- 一旦发现自己手快直推了 main，立刻通知团队，必要时 revert
 
 ### 5.2 Phase C：配置 DeepSeek review 需要的 DEEPSEEK_API_KEY
 
