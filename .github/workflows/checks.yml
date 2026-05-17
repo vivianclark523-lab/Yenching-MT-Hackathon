@@ -1,0 +1,73 @@
+name: Checks
+
+# 触发条件：
+# 1. push 到任意分支 → 兜底（即使有人本地 --no-verify 跳过 pre-commit）
+# 2. PR 到 main → 验收门槛
+on:
+  push:
+    branches-ignore:
+      - "dependabot/**"   # dependabot 分支不重复跑
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write   # 让 Action 能在 PR 上评论
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: 跑全部 pre-commit 钩子（和本地完全一致）
+  # ---------------------------------------------------------------------------
+  pre-commit:
+    name: pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run pre-commit on all files
+        uses: pre-commit/action@v3.0.1
+
+  # ---------------------------------------------------------------------------
+  # Job 2: openclaw/ 是 vendored 上游代码，理论上不应该改。
+  # 如果 PR 改了它，发个警告评论（不阻断），让 reviewer 注意。
+  # ---------------------------------------------------------------------------
+  warn-on-openclaw-changes:
+    name: Warn if openclaw/ modified
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 需要完整历史才能 diff 到 base
+
+      - name: Check whether openclaw/ was touched
+        id: check
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          if git diff --name-only "$base"...HEAD | grep -q '^openclaw/'; then
+            echo "touched=true" >> "$GITHUB_OUTPUT"
+            echo "## ⚠️ 这个 PR 改了 \`openclaw/\` 下的文件" > /tmp/comment.md
+            echo "" >> /tmp/comment.md
+            echo "\`openclaw/\` 是 vendored 上游代码（v2026.5.12 锁定），按团队约定不应该直接改。" >> /tmp/comment.md
+            echo "如果是有意的（比如临时 patch 上游 bug），请在 PR 描述里说明原因。" >> /tmp/comment.md
+            echo "如果是无意的（比如 Claude Code 误改），revert 掉再 push。" >> /tmp/comment.md
+            echo "" >> /tmp/comment.md
+            echo "改动的文件：" >> /tmp/comment.md
+            echo '```' >> /tmp/comment.md
+            git diff --name-only "$base"...HEAD | grep '^openclaw/' >> /tmp/comment.md
+            echo '```' >> /tmp/comment.md
+          else
+            echo "touched=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post warning comment
+        if: steps.check.outputs.touched == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: openclaw-touched
+          path: /tmp/comment.md
