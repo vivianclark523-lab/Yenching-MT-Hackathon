@@ -1,7 +1,7 @@
 # 团队协作 & 代码验收工作流
 
 > 谁看这份：3 位 PM + 未来进来的 Claude Code 实例。
-> 一句话定义：**所有 main 分支的改动必须经过 PR + Actions 检查 + Claude 复审；本地 commit 前还有一层 pre-commit 兜底。**
+> 一句话定义：**所有 main 分支的改动必须经过 PR + Actions 检查 + AI 复审（DeepSeek）；本地 commit 前还有一层 pre-commit 兜底。**
 
 ---
 
@@ -12,7 +12,7 @@
 | **1. 本地 pre-commit hooks** | 每次 `git commit` 前 | 你的电脑 | 你（用 `--no-verify`） |
 | **2. GitHub Actions checks** | 每次 push + 每次 PR | GitHub 云端 | 没人（除非删工作流） |
 | **3. Branch protection** | 想 push 到 main 时 | GitHub 仓库设置 | repo admin |
-| **4. Claude AI review** | 每次 PR 打开 / 更新 | GitHub 云端 | 没人 |
+| **4. DeepSeek AI review** | 每次 PR 打开 / 更新 | GitHub 云端 | 没人 |
 
 层数越高保护越强但越难绕过。第 1 层是给自己看的（早期反馈），第 2–4 层是给团队看的（不可绕过的硬门槛）。
 
@@ -75,7 +75,7 @@ EOF
 
 # 7. 等待：
 #    - Actions checks 全绿（自动跑）
-#    - Claude review 评论（自动跑，需要 ANTHROPIC_API_KEY 已配置）
+#    - DeepSeek AI review 评论（自动跑，需要 DEEPSEEK_API_KEY 已配置）
 #    - 你自己看一眼 diff
 
 # 8. 合入 main（self-merge 即可，无需他人 approve）
@@ -117,12 +117,14 @@ gh pr merge --squash --delete-branch
 - **pre-commit job**：服务端跑一遍和本地一样的钩子（防本地 --no-verify）
 - **warn-on-openclaw-changes job**：PR 改了 `openclaw/` 会留警告 comment（不阻断，但 reviewer 会注意）
 
-### 4.2 `claude-review.yml`：每次 PR
-- 自动用 Anthropic Claude Code Action 复审 PR diff
-- 评审重点（写在 prompt 里）：密钥泄露 / vendored 污染 / SKILL.md 质量 / Mock 一致性 / 逻辑 bug
-- **依赖**：`ANTHROPIC_API_KEY` 仓库 secret 已配置（见第 6 节）
+### 4.2 `ai-review.yml`：每次 PR（DeepSeek V4 Pro）
+- 自动调 DeepSeek V4 Pro（思考模式 reasoning_effort=high）复审 PR diff
+- 实现脚本：`.github/scripts/ai-review.py`
+- 评审重点（在 prompt 里写死）：密钥泄露 / vendored 污染 / SKILL.md 质量 / Mock 一致性 / 逻辑 bug
+- **依赖**：`DEEPSEEK_API_KEY` 仓库 secret 已配置（见第 5.2 节）
+- **想换模型**：改 `.github/workflows/ai-review.yml` 顶部的 `env.DEEPSEEK_MODEL`（如换 `deepseek-v4-flash` 更快更省）
 
-如果你想在 PR 里再触发一次 Claude review（比如改完之后），在 PR 评论里 @-mention `@claude`。
+如果你想在 PR 里再触发一次 review（比如改完之后），在 PR 评论里 @-mention `@deepseek`。
 
 ---
 
@@ -142,28 +144,30 @@ gh pr merge --squash --delete-branch
    - ✅ **Require status checks to pass before merging**
      - 子选项 **Require branches to be up to date before merging**：勾上
      - 在 search 框里搜并添加：`pre-commit hooks`（来自我们的 checks.yml）
-     - （可选）也加 `Claude Code Review`，但首次配置 secret 之前 Claude review 会失败，慎勾
+     - （可选）也加 `DeepSeek review`，但首次配置 secret 之前 AI review 会失败，慎勾
    - ✅ **Require conversation resolution before merging**（PR 评论必须 resolved 才能 merge）
    - ✅ **Do not allow bypassing the above settings**（admin 也要遵守，防自己手抖）
 5. **Save changes**
 
 完成后试着直接 push 到 main，应该被拒绝。
 
-### 5.2 Phase C：配置 Claude review 需要的 ANTHROPIC_API_KEY
+### 5.2 Phase C：配置 DeepSeek review 需要的 DEEPSEEK_API_KEY
 
-1. 拿到一个 Anthropic API key：
-   - 自己账号的：https://console.anthropic.com → Settings → API Keys → Create Key
-   - **注意**：用你**个人**的 Anthropic 账号，**不是** Mainfunc 工作账号（合规边界）
+1. 在 DeepSeek 平台拿一个 API key：
+   - 打开 https://platform.deepseek.com/api_keys → Create API Key
+   - 复制下来（key 只显示一次，关页面就再也看不到）
 2. 把 key 加到仓库的 Actions secrets：
    - 打开：https://github.com/vivianclark523-lab/Yenching-MT-Hackathon/settings/secrets/actions
    - 点 **New repository secret**
-   - **Name**：`ANTHROPIC_API_KEY`（一字不差）
+   - **Name**：`DEEPSEEK_API_KEY`（一字不差，区分大小写）
    - **Value**：粘贴刚才创建的 key
    - **Add secret**
-3. 配置 GitHub App（推荐路径——避免直接暴露 token）：
-   - 跟着 Anthropic 官方文档走：https://docs.claude.com/en/docs/claude-code/github-actions
-   - 装 Anthropic 的 Claude GitHub App 到本仓库
-4. 验证：开一个 dummy PR，等 1–2 分钟看 Claude 是否留评论。
+3. 验证：开一个 dummy PR，等 1–3 分钟看 DeepSeek 是否留评论（思考模式可能稍慢）。
+4. 想换模型：直接改 `.github/workflows/ai-review.yml` 顶部 `env.DEEPSEEK_MODEL`：
+   - `deepseek-v4-pro`（默认）—— 强代码、思考模式深度审查
+   - `deepseek-v4-flash` —— 更快更便宜，适合 PR 多的时候
+
+DeepSeek API 文档：https://api-docs.deepseek.com/zh-cn/
 
 ### 5.3 验证 Phase A 服务端那一层
 
@@ -184,9 +188,10 @@ git push origin main
 |---|---|
 | 加/删一个 pre-commit 钩子 | `.pre-commit-config.yaml` + commit + push |
 | 调整 Actions 检查项 | `.github/workflows/checks.yml` |
-| 改 Claude review 的关注重点 | `.github/workflows/claude-review.yml` 里的 `prompt:` 段 |
+| 改 AI review 的关注重点 | `.github/scripts/ai-review.py` 里的 `REVIEW_PROMPT_TEMPLATE` |
+| 切换 AI review 模型 | `.github/workflows/ai-review.yml` 顶部 `env.DEEPSEEK_MODEL` |
 | 调整 branch protection 规则 | 网页（5.1 节链接） |
-| 轮换 Anthropic API key | 网页（5.2 节链接） + 让旧 key revoke |
+| 轮换 DeepSeek API key | 网页（5.2 节链接） + 让旧 key revoke |
 
 ---
 
@@ -198,5 +203,5 @@ git push origin main
 2. 根 `CLAUDE.md`（项目背景 + 选题决策）
 3. `docs/openclaw-architecture.md`（OpenClaw 框架地图）
 4. 钩子报错 → 看错误信息 → grep 网上文档（钩子名 + "fail"）
-5. 还是卡 → 在 PR 里 @claude 让它帮你看
+5. 还是卡 → 在 PR 里 @deepseek 让它帮你看
 6. 再卡 → 找 Vivian
