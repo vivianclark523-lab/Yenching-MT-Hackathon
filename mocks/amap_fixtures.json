@@ -1,0 +1,63 @@
+{
+  "_comment": "无 AMAP_KEY 时的回落样本，数据取自高德真实返回（望京），保证 demo 可复现。",
+  "geocode": {
+    "_default": "116.4827,40.0026",
+    "望京美团": "116.4827,40.0026",
+    "望京": "116.4827,40.0026",
+    "三里屯": "116.4551,39.9385",
+    "国贸": "116.4612,39.9088"
+  },
+  "search": {
+    "火锅": [
+      {
+        "id": "B0FFLQAAAA01",
+        "name": "海底捞火锅(望京新荟城店)",
+        "rating": "4.7",
+        "cost": "120.00",
+        "opentime_today": "10:00-07:00",
+        "tag": "捞派捞面,番茄锅底,本帮酱油拌面",
+        "business_area": "望京",
+        "tel": "010-12345678",
+        "location": "116.481,40.003",
+        "address": "望京东园一区120号楼-2至6层101号",
+        "distance": "350",
+        "photos": []
+      },
+      {
+        "id": "B0FFLQAAAA02",
+        "name": "老诚一锅羊蝎子",
+        "rating": "4.5",
+        "cost": "99.00",
+        "opentime_today": "11:00-23:00",
+        "tag": "羊蝎子火锅,手切羊肉",
+        "business_area": "望京",
+        "tel": "010-23456789",
+        "location": "116.470,40.001",
+        "address": "北京城区望京西园103号楼三层",
+        "distance": "1100",
+        "photos": []
+      },
+      {
+        "id": "B0FFLQAAAA03",
+        "name": "京门老爆三(望京西园店)",
+        "rating": "4.6",
+        "cost": "87.00",
+        "opentime_today": "11:00-23:00",
+        "tag": "老北京爆三样,京味菜",
+        "business_area": "望京",
+        "tel": "010-34567890",
+        "location": "116.469,40.000",
+        "address": "北京城区望京西园103号楼1到3层",
+        "distance": "1250",
+        "photos": []
+      }
+    ]
+  },
+  "route": {
+    "_default": [
+      {"mode": "walking", "distance": "8694", "duration": "6955", "taxi_cost": null, "tmc_status": null},
+      {"mode": "driving", "distance": "9520", "duration": "1480", "taxi_cost": "31.00", "tmc_status": "缓行"},
+      {"mode": "transit", "distance": "9100", "duration": "2400", "cost_yuan": "4"}
+    ]
+  }
+}

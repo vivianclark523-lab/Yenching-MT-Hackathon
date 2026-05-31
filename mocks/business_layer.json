@@ -1,0 +1,22 @@
+{
+  "_comment": "业务层 Mock（排队/券/票务）状态机配置。queue 为单调推进型；coupons 为时段型；ticket 为库存型。虚拟时钟由 amap.py virtual_now() 提供。demo 日 2026-06-06，t0 设在饭点开始。",
+  "海底捞火锅(望京新荟城店)": {
+    "queue": {"initial": 40, "rate_per_min": 0.25, "t0": "2026-06-06T17:00:00", "min_per_table": 2.0},
+    "coupons": [
+      {"start_hour": 14, "end_hour": 17, "text": "下午茶时段 满200减30"},
+      {"start_hour": 21, "end_hour": 24, "text": "夜宵档 满150减20"}
+    ]
+  },
+  "老诚一锅羊蝎子": {
+    "queue": {"initial": 18, "rate_per_min": 0.2, "t0": "2026-06-06T17:30:00", "min_per_table": 2.5}
+  },
+  "京门老爆三(望京西园店)": {
+    "queue": {"initial": 12, "rate_per_min": 0.15, "t0": "2026-06-06T17:30:00", "min_per_table": 2.0},
+    "coupons": [
+      {"start_hour": 11, "end_hour": 14, "text": "午市 招牌套餐 8 折"}
+    ]
+  },
+  "嘉禾望京影院": {
+    "ticket": {"left": 4}
+  }
+}
