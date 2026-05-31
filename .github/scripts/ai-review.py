@@ -20,7 +20,7 @@ from pathlib import Path
 import requests
 
 OUTPUT_PATH = Path("/tmp/ai-review.md")
-MAX_DIFF_CHARS = 60000  # diff 太大就截断，省 token + 避免上下文超限
+MAX_DIFF_CHARS = 100000  # diff 太大就截断，省 token + 避免上下文超限
 REQUEST_TIMEOUT_SEC = 600  # 思考模式可能慢
 
 REVIEW_PROMPT_TEMPLATE = """\
