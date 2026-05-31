@@ -281,8 +281,12 @@ def virtual_now():
 
 
 def _eval_queue(model, now):
-    """单调推进型排队：state(t) = max(0, initial - rate*(分钟数 since t0))。"""
-    t0 = datetime.fromisoformat(model["t0"])
+    """单调推进型排队：rush_start 为每日时段起点（time-of-day，与日期解耦）。
+
+    state(t) = max(0, initial - rate * (now 距当天 rush_start 的分钟数))。
+    """
+    rs = model.get("rush_start", "17:00")
+    t0 = now.replace(hour=int(rs[:2]), minute=int(rs[3:5]), second=0, microsecond=0)
     minutes = max(0.0, (now - t0).total_seconds() / 60.0)
     tables = max(0, round(model["initial"] - model["rate_per_min"] * minutes))
     eta = round(tables * model.get("min_per_table", 2.0))
