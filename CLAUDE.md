@@ -1,125 +1,226 @@
-# 美团校园 AI Hackathon · 项目背景与选题决策
+# 美团校园 AI Hackathon · 命题 01 · OpenClaw 本地生活管家
 
-> 这份文档是给**未来打开这个目录的人/Claude**看的——一份精凝的项目接力棒。完整的选题对话历史在 [_history/0516_选题决策会话.jsonl](_history/0516_选题决策会话.jsonl)（Claude Code 内部格式，人不可读但可用作复盘）。
+> **本文档定位**：项目背景文件 —— AI 进入仓库时第一份要读的文档。
+> 与 [`README.md`](README.md) 的分工：README 讲"代码该怎么写"（开发约定），本文档讲"**为什么这样做** + 业务背景 + 关键工程模式"。
 
-## 一、项目快照
+---
 
-- **比赛**：美团校园 AI Hackathon（核心本地商业主办）
-- **时间窗**：2026/05/10 – 2026/06/06；报名截止 5/22，作品提交截止 6/7
-- **决赛**：12 个名额，命题与自由赛道**不分配额**统一评选；6 月底线下决赛
-- **团队**：3 名 PM 背景成员；不能独立写前后端代码；主要工具是 Claude Code（Opus 4.7 / 1M context）
-- **可投入**：工作日单人 1–2h；周末单人 8h；4 周合计约 280–315 人时
-- **奖金池**：30 万+
-
-## 二、最终选题：命题 01 · 基于 OpenClaw 的本地生活全天候私人管家
+## 一、命题理解
 
 ### 出题方与评分锚点
 
 - **出题人**：冯岩，基础研发 ML7（LongCat 大模型 + Agent 能力建设团队）
-- **评委心智锚**（从直播话术里反复确认的）：
+- **评委心智锚**（来自直播话术）：
   - "**AI 和真实业务的碰撞**" > 技术原创性
   - "**洞察 + 想法 + 产品效果**" > 代码精巧度（陈晟原话）
-  - "**服务找人**" > "人找服务"（冯岩对题面的本质判断）
-- **评分三维度**：创新性（人设/Skill/沙盒玩法）/ 功能完整性（Skill 跑通+沙盒细节+代码文档）/ 实现效果（demo 流畅+执行快+监控可靠）
-- **现场风险**：评委会**现场跑真实例子做测试**——demo 必须扛得住临场拨时间、临场换 case
+  - "**服务找人**" > "人找服务"（冯岩对题面的本质判断，原话："本质上是我们现在的本地生活服务还停留在用户主动检索的阶段，缺这样一个串联的过程"）
 
-### 硬约束
+### 评分三维度（直接影响所有产品 / 工程决策）
 
-- **必须用 OpenClaw 框架**，必须遵循 SKILL.md 插件规范
-- **至少 3 个本地生活相关 Skill**
-- **不收集真实用户隐私**，全部用 Mock 或显式输入
-- **没有脱敏数据**——所有 API 自己 Mock；冯岩明确鼓励用 LLM 来 Mock
+| 维度 | 关注点 |
+|---|---|
+| **创新性** | 管家人设的想象力 / 独特 Skill 设计 / 后台协同玩法 / 沙盒设计 |
+| **功能完整性** | 管家人设 + 记忆 / Skill 跑通 / 任务演示 run / 沙盒细节 / 代码结构 / 文档 |
+| **实现效果** | demo 流畅 / 执行快 / 后台监控可靠（**评委会现场跑真实例子做测试**）|
 
-## 三、选 OpenClaw 这条路的几个关键信号
+### 硬约束（任何代码/产品决策都不能违反）
 
-1. **OpenClaw 是独立的开源 Agent 框架**（不是 GenSpark 开发的，但 GenSpark 是它的重度采用方）。团队成员日常在 GenSpark 用 OpenClaw 做 Claw 产品 = **零起步成本**，省下 1–2 天框架学习时间，这就是关键差距。
-2. **OpenClaw 的 SKILL.md 规范和 Claude Code 的 skill 体系是同一套**（YAML frontmatter + Markdown 正文）——意味着 **Claude Code 写 OpenClaw Skill = 让它写它最熟悉的格式**。`~/.claude/skills/` 里就有一堆现成的 skill 样本。
-3. **市面 OpenClaw 资料很成熟但"本地生活管家"是空白**——所有现成教程都是"个人效率/通用开发"场景，**没人做过本地生活方向**。这是差异化的机会，不是问题。
-4. **撞车风险中等**：OpenClaw 框架本身的学习门槛会挡掉大部分纯 PM 团队，命题 01 的赛道里竞争密度低于 05、06。
-
-### 否决过的其他选项
-
-- **命题 03/04（美甲 CV / AutoSolver 配送）**：算法重题，PM 团队顶不住
-- **命题 02（对话评测）**：必须有前端 + 一站式平台，工程负担过重
-- **命题 06（周末活动 Agent）**：曾经的首选，但出题人是小团 Agent 产品部，与小团撞车太严重，差异化空间被压缩
-- **命题 05（路线规划）**：和 06 高度重叠，且 OpenClaw 的"框架壁垒"在 05 不存在，无独特优势
-
-## 四、Skill 方向决策（待团队 5/16–5/17 拍板）
-
-四个候选主线，每个都是"3 Skill + Mock 状态机 + demo 路径"的完整设计：
-
-| 方向 | 用户故事 | 3 个 Skill | 撞车风险 | 推荐度 |
-|---|---|---|---|---|
-| **A · 周末同好局管家** | 朋友 4 人聚餐 → 监控海底捞排队 → 5 桌时自动叫车 | 聚会方案师 / 黄金时机监控 / 临场动线管家 | 中（冯岩自己讲的示例） | 兜底 |
-| **B · 错峰省钱管家** ⭐ | 精打细算的城市用户：抢券+错峰+临期券提醒 | 券池监控 / 错峰建议 / 囤券临期 | 低 | **首选** |
-| **C · 加班解救+通勤代办** | 996 白领：晨间例行 / 碎片代办 / 加班顺路晚餐 | 加班解救 / 碎片代办 / 晨间例行 | 低 | 次选 |
-| **D · 家庭多人管家** | 一个管家服务一家三口，处理偏好融合+日程协调+代办路由 | 多人偏好融合 / 家庭日程协调 / 代办委托路由 | 极低 | 高风险高回报，依赖 OpenClaw 多用户能力验证 |
-
-### 当前建议路径
-
-- **5/14–5/15**：B 和 A 各起一个最小骨架（一个 Skill 跑通即可），比较 demo 表现力 + Mock 设计顺手度
-- **5/16**：团队评估，锁定主选
-- **5/17 起**：全力展开 3 个 Skill
-
-### 为什么 B 当前排在首位
-
-- 撞车风险显著低于 A
-- 三个 Skill 全部是"后台主动型"——和冯岩"服务找人"的话术契合度比 A 还高
-- "中国式精打细算"在评委眼里有独特记忆点
-- Mock 数据全是公开信息，无隐私顾虑
-
-## 五、Mock 状态机设计模式（这道题真正的工程关键）
-
-冯岩明示"同接口不同时间不同结果"——这是隐藏的工程硬骨头。设计原则：
-
-- **集中虚拟时钟**：所有 Mock 共享一个 clock 模块，支持快进 / 拨快 / 拨慢（评委 demo 时压缩时间、临场测试时手动调）
-- **三种 Mock 模板**：
-  - 单调推进型（排队号、票务库存）：`state(t) = max(0, initial - rate*(t-t0))`
-  - 时段周期型（高峰指数、加价倍率）：按 hour-of-day 分段函数
-  - 事件触发型（地铁延误、突发暴雨）：剧本预埋
-- **禁忌**：不要用大模型实时生成 Mock 状态（不稳定）；不要用纯随机数（demo 不可复现）；不要堆太多噪声事件（评委只看 3 分钟）
-- **加分项**：写一份"剧本时间轴"+ 给评委一个"手动拨时间"的入口 + 沙盒可视化（当前虚拟时间、后台跑了什么、下一个事件什么时候触发）
-
-## 六、关键资源指针
-
-### OpenClaw 起手资料（按优先级）
-
-- **Tier 1**：[OpenClaw 官方 Skill 文档](https://docs.openclaw.ai/tools/skills) + [官方 coding-agent SKILL.md 模板](https://github.com/openclaw/openclaw/blob/main/skills/coding-agent/SKILL.md) + [openclaw/openclaw 主仓库](https://github.com/openclaw/openclaw)
-- **Tier 2**：[xianyu110/awesome-openclaw-tutorial](https://github.com/xianyu110/awesome-openclaw-tutorial) — 3.2 万字中文教程；本项目需要的章节：第 2 章部署 / 第 8 章 Skill 扩展 / 第 10 章 API 对接 / 第 13 章自动化工作流
-- **Tier 3**：[LongCat × OpenClaw（美团技术团队）](https://tech.meituan.com/2026/03/09/longcat-openclaw.html) — 看出题方视角
-- **Tier 4**（避免重复造轮）：[VoltAgent/awesome-openclaw-skills](https://github.com/VoltAgent/awesome-openclaw-skills) — 5400+ Skill 集合
-
-### 已有决策文档（在其他位置）
-
-- **v1 选题分析**：`~/daily life with claude/美团黑客松赛题分析与推荐.md`
-- **出题人解题会议纪要**：`~/obsidian with claude/hackathon/0507_美团黑客松解析直播.md`
-- **v2 选题修正（直播后）**：`~/obsidian with claude/hackathon/0513_选题建议_v2_直播后更新.md`
-
-### GenSpark 内部对 OpenClaw 的应用参考（合规边界）
-
-- **可参考**：`~/openclaw-genspark-guide.md`（顶层导读）+ `~/gen-spark/backend/openclaw/` + `~/gen-spark/toolkits/openclaw/`（看用法，理解能力边界）
-- **不要参考**：`~/openclaw-genspark-deep-dive.md`（未经验证）
-- **合规边界**：只用公开框架 + 公开规范 + 公开常识；不要把 GenSpark 对 OpenClaw 的产品化经验/内部代码搬进比赛作品
-
-## 七、下一步待办（4 周里程碑）
-
-- **本周（5/13–5/18）**：
-  - 5/14：1 人验证 OpenClaw 本地能跑（IM 接 Telegram/Discord）；2 人做方向 B、A 的 Skill 产品设计稿
-  - 5/15：Claude Code 起方向 B、A 各一个 Skill 的骨架；写"剧本时间轴"草稿
-  - 5/16：团队评估方向 B vs A，**锁定主选**
-  - 5/17–5/18：3 个 Skill 全部铺开骨架；状态机 Mock 框架搭起来
-- **W2（5/19–5/25）**：第一个完整 demo case 跑通；管家人设打磨；写设计文档草稿
-- **W3（5/26–6/1）**：第二个 demo case；准备 2–3 个失败 case 的 replan 演示；录制 demo 视频
-- **W4（6/2–6/6）**：极限打磨；6/5 全天 buffer；6/6 中午前提交
-
-## 八、给未来的自己/Claude 的备注
-
-- **评委可能现场拨时间** → 沙盒可视化和"剧本时间轴"必须做出来给评委演示
-- **Demo 30 秒抓人** → 第一个 case 必须是"用户一句话 → 管家自主跑完一段任务"的强叙事，不要堆功能
-- **管家人设是创新性大头** → 不要做"中规中矩的 AI 助手"，要有性格（北京邻居大爷 / 上海会过日子的阿姨 / 996 白领的"老司机"室友）
-- **3 个 Skill 之间必须有联动剧情** → demo 时 3 个 Skill 像同一台机器的不同部件，不是 3 个独立产品
-- **隐私和合规** → 不收集真实数据；不引用 GenSpark 内部代码；不做爬虫绕审核
+- ✅ **必须用 OpenClaw 框架**，严格遵循 SKILL.md 插件规范
+- ✅ **至少 3 个本地生活相关 Skill**
+- ❌ **不收集真实用户隐私**，全部用 Mock 或显式输入
+- ❌ **没有脱敏数据** —— 所有 API 自己 Mock；冯岩明确鼓励用 LLM 来 Mock
+- ⚡ **现场风险**：评委会**临场拨虚拟时间、临场换 case** —— demo 必须扛得住
 
 ---
 
-*备份的对话历史：[_history/0516_选题决策会话.jsonl](_history/0516_选题决策会话.jsonl)（约 900KB，包含从 v1 选题分析到 4 个 Skill 方向决策的完整对话）。jsonl 是 Claude Code 内部格式，可用 `jq` 解析按行 JSON。*
+## 二、Mock 状态机设计模式（核心工程模式）
+
+冯岩明示"**同接口不同时间返回不同结果**"。这是这道题隐藏的工程硬骨头，也是评分"**沙盒设计**"维度的核心载体。
+
+> 📖 **完整深度解读**：[`docs/mock-state-machine-deep-dive.md`](docs/mock-state-machine-deep-dive.md)
+> 包括：为什么不能用静态 JSON / 状态机本质 / 三类型业务直觉 / 完整数据流图 / 反模式 / 沙盒 UI 关系 / 团队常见 5 问。**写 mock 数据前必读**。
+
+### 2.1 设计原则
+
+**1. 集中虚拟时钟（所有 Skill 必须共享）**
+
+```python
+# mocks/clock.py（共享单例）
+from mocks.clock import virtual_now
+current_time = virtual_now()   # 受沙盒控制的虚拟时间
+```
+
+❌ 禁止 `datetime.now()` —— 评委拨时间看不到反应。
+❌ 各 Skill 不要各搞一份时钟 —— 不同时钟之间会失同步，3 Skill 联动崩盘。
+
+**2. 三种 Mock 模板**（任何业务数据都套这三类）
+
+| 类型 | 公式 | 适用场景 | 我们项目里的具体例子 |
+|---|---|---|---|
+| **单调推进型** | `state(t) = max(0, initial - rate * (t - t0))` | 量随时间线性变化 | 排队号递减（Skill 1）/ 充电宝计费递增 / 票务库存递减 |
+| **时段周期型** | `state(t) = func(hour_of_day(t))` | 按一天分时段周期波动 | 餐饮高峰指数 / 神券限时段（Skill 2）/ 配送费动态变化 |
+| **事件触发型** | 剧本预埋 `[(time, target, event), ...]` | 突发事件 / 不可预期场景 | 餐厅突发故障 / 前面有人放弃跳号 / 雨突然下 / 骑手延误 |
+
+**3. Mock JSON 标准 schema**（3 Skill 必须统一使用）
+
+```json
+{
+  "schema_version": 1,
+  "kind": "restaurants",
+  "items": [
+    {
+      "id": "shop-001",
+      "name": "海底捞·王府井店",
+      "fields": { "...": "..." }
+    }
+  ],
+  "state_machines": [
+    {
+      "target_id": "shop-001",
+      "type": "monotonic_decay",
+      "params": { "initial_queue": 30, "rate_per_minute": 0.5 }
+    }
+  ],
+  "events": [
+    {
+      "time": "2026-05-31T18:30:00+08:00",
+      "target_id": "shop-001",
+      "event": "jump",
+      "delta": -3
+    }
+  ]
+}
+```
+
+### 2.2 禁忌（违反 = demo 翻车）
+
+- ❌ **不要用 LLM 实时生成 Mock 状态** —— 评委拨两次时间得到两个不同结果，沙盒就废了
+- ❌ **不要用纯随机数** —— demo 不可复现，录视频要拍多遍
+- ❌ **不要堆太多噪声事件** —— 评委只看 3 分钟，剧本主线要突出，每个事件都得有"为什么"
+
+### 2.3 加分项 —— 沙盒可视化的 4 个必备组件
+
+冯岩评分项含"沙盒设计"。我们必须实现：
+
+1. **共享虚拟时钟模块**（`mocks/clock.py`）—— 所有 Skill 时间感知都走 `virtual_now()`
+2. **状态机基类**（`mocks/state_machine.py`）—— 三种类型统一接口 `state_at(t) → value`
+3. **剧本时间轴文件**（`mocks/scenario.md`，人类可读）—— 说清楚 demo 哪几个关键瞬间预埋了什么。**评委如想看"为什么 18:25 那个瞬间是这样"，能直接读这个文件**
+4. **沙盒 UI**（`sandbox/index.html` + `sandbox/server.py`）—— 显示当前虚拟时间 + 各 Skill 状态 + 待发推送队列 + 可手动拨时间。详见 `0531_W1冲刺_分工方案_v3.md` 的 "沙盒 UI MVP 具体长什么样" 节
+
+### 2.4 演示张力的关键瞬间
+
+Demo 时这几个瞬间必须可控可复现：
+
+- **临界时刻**：排队从 8 桌跳到 4 桌 / 充电宝离 24h 还有 18 分钟 / 神券 18:00 正好激活
+- **决策时刻**：管家在 X 时刻基于 Y 状态做出 Z 决策（最体现"任务编排"评分）
+- **联动时刻**：Skill A 完成触发 Skill B 启动（最体现"服务串联"哲学）
+
+这些瞬间在 `mocks/scenario.md` 里要明确写出来，作为"demo 剧本时间轴"。
+
+---
+
+## 三、关键资源指针
+
+### 3.1 项目内的设计文档（git 跟踪）
+
+| 路径 | 用途 |
+|---|---|
+| [`README.md`](README.md) | AI 共同开发约定（必读） |
+| [`docs/openclaw-architecture.md`](docs/openclaw-architecture.md) | OpenClaw 框架地图（哪里找什么） |
+| [`docs/skills-conventions.md`](docs/skills-conventions.md) | Skill 写作规范 |
+| [`docs/team-workflow.md`](docs/team-workflow.md) | Git / CI / 协作流程 |
+| `skills/<name>/SKILL.md` × 3 | 3 个 Skill 的最终定义 |
+
+### 3.2 项目设计阶段产出（git 跟踪）
+
+| 文档 | 内容 |
+|---|---|
+| [`docs/design/skill-plan.md`](docs/design/skill-plan.md) | **当前锁定的 3 Skill 完整产品定义**（必读基线） |
+| [`docs/design/sprint-plan.md`](docs/design/sprint-plan.md) | 当前生效的分工 + 时间表 + 沙盒 UI 设计说明 |
+| [`docs/design/skill3-feasibility.md`](docs/design/skill3-feasibility.md) | Skill 3 接高德 API + 文生图 + memory 的可行性调研 |
+| [`docs/design/reference-products.md`](docs/design/reference-products.md) | dianping-queue + MT-Paotui 两份参考 SKILL.md 深度解码 |
+| [`docs/design/livestream-notes.md`](docs/design/livestream-notes.md) | 出题人 + 直播 QA 完整纪要 |
+
+这些文档由 PM 团队在设计阶段产出，**评委查"代码结构 + 文档"评分维度时直接看这里**。新加入项目的 AI 工具或团队成员，应**先读 `skill-plan.md`** 建立产品认知，再展开看其余文档。
+
+### 3.3 OpenClaw 上游资料
+
+| 优先级 | 链接 / 路径 | 用途 |
+|---|---|---|
+| ⭐⭐⭐ | `openclaw/skills/skill-creator/SKILL.md` | 写 Skill 的圣经（**必读**） |
+| ⭐⭐⭐ | `openclaw/skills/weather/SKILL.md` | 最简调外部 API 范例 |
+| ⭐⭐⭐ | `openclaw/AGENTS.md` | OpenClaw 根目录文档（电报体硬规则） |
+| ⭐⭐ | [OpenClaw 官方文档](https://docs.openclaw.ai/) | 在线版完整文档 |
+| ⭐⭐ | `openclaw/docs/concepts/memory-builtin.md` | 用户偏好 / 记忆系统设计 |
+| ⭐⭐ | `openclaw/docs/channels/feishu.md` | 飞书 channel 配置 |
+| ⭐ | [LongCat × OpenClaw 美团技术博客](https://tech.meituan.com/2026/03/09/longcat-openclaw.html) | 出题方视角 |
+
+### 3.4 参考但不复制的开源 Skill（本地 clone，gitignore）
+
+| 路径 | 角色 |
+|---|---|
+| `_local/mt-paotui/` | 美团官方跑腿 Skill —— 学**业务模型** + **SKILL.md 写作模板** |
+| `_local/dianping-queue-skill/` | 个体作者排队 Skill —— 借鉴"**标准回复模板**" + "**断点处理**"等设计模式 |
+
+**合规边界**：只学业务理解和写作风格，**不复制任何代码**。
+
+### 3.5 我们使用的外部 API
+
+| 服务 | 用途 | 调用方式 |
+|---|---|---|
+| **Moonshot Kimi**（K2.5，256k） | LLM 后端 | OpenClaw `~/.openclaw/agents/main/agent/auth-profiles.json` 配置 |
+| **高德地图 Web API v5** | POI 搜索 + 路径规划 + 距离 + 营业时间（真数据） | 通过 `scripts/amap.py` 唯一封装入口 |
+| **豆包文生图** | Skill 3 漫画风格行程卡片 | 通过 `scripts/imagegen.py` 唯一封装入口（含 fallback） |
+| **飞书 Bot API**（WebSocket 模式） | 评委交互 channel | `openclaw channels add --channel feishu` |
+| **wttr.in**（开源天气 API） | 天气真数据 | `openclaw/skills/weather/SKILL.md` 已封装 |
+
+---
+
+## 四、设计决策的"为什么"
+
+这一节固化关键产品哲学，让任何 AI 在做新决策时能引用回来：
+
+### 4.1 为什么走"服务找人"哲学（贯穿 3 Skill 设计）
+
+冯岩原话："**本质上是我们现在的本地生活服务还停留在用户主动检索的阶段，缺这样一个串联的过程。**"
+
+对应到产品：3 个 Skill 都必须有**主动出击的入口** —— 不仅响应用户问询，**更要在用户没开口前主动出现**（基于订单状态、习惯时段、群聊关键词、用户美团预约等数据）。
+
+具体每个 Skill 的"主动出击"形态见 [`docs/design/skill-plan.md`](docs/design/skill-plan.md)。
+
+### 4.2 为什么 Mock 是状态机而不是静态数据
+
+冯岩举例："**排队接口在不同时间返回不同结果**（10 分钟前有位、10 分钟后满）"。
+
+Mock 死的话评委一拨时间就穿帮。**Mock 状态机不是工程偷懒，是评分维度本身的要求**。设计细节见第二节。
+
+### 4.3 为什么管家有"人设" + "记忆"（评委必看的创新性维度）
+
+冯岩明示："**通过 .so 文件给管家设置人设和记忆**。让它知道自己是谁、用户的习惯——不吃辣、预算两万以内、习惯坐地铁。"
+
+OpenClaw 用 `memory-core` plugin 默认 loaded，存 markdown 文件在 `~/.openclaw/agents/main/memory/`（`preferences.md` / `habits.md` / `social.md`）。**LLM 自动注入相关 memory 内容到上下文**——Skill 代码里**不需要**主动读 memory。
+
+### 4.4 为什么 3 个 Skill 而不是 1 个万能 bot
+
+- "**任务编排 + 异步执行 + 状态监控**"是冯岩明示的考察重点，3 Skill 联动 = 任务编排的最直接体现
+- 单 Skill 难以同时驾驭 3 种不同 trigger（用户表达 / 订单状态 / 群聊讨论）
+- 评委 30 秒 demo 里需要 3 个明显不同的"亮点时刻"——单 Skill 张力不够
+
+### 4.5 合规边界（守住底线）
+
+- 不引用任何工作场所 / 公司内部代码
+- 不爬取真实美团数据（除官方公开 API 如高德的）
+- 不在 demo / 提交材料里包含真实用户信息（手机号、姓名、地址等）
+- 借鉴 `_local/` 下的参考仓库时只学业务模型 + 写作风格，不复制代码
+
+---
+
+## 五、给所有 AI 工具的最后一句
+
+> **AI 进入仓库时的阅读顺序建议**：
+> 1. 本文档（业务背景 + 核心工程模式 + 设计哲学）
+> 2. [`README.md`](README.md)（开发约定 + 代码风格 + 目录结构）
+> 3. [`docs/openclaw-architecture.md`](docs/openclaw-architecture.md)（OpenClaw 框架地图）
+> 4. 具体要改的 Skill 目录下的 `SKILL.md`
+>
+> **遇到约定不清楚的情况**：先在 PR 描述里把判断写明白让团队 review，**不要拍脑袋自己决定**。
