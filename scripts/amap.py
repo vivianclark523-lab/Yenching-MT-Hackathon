@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""高德 Web 服务 API 包装层（Skill 3 用）。
+"""高德 Web 服务 API 包装层（全项目共享的高德唯一入口）。
 
 子命令：
   geocode   地址 → 坐标
   search    周边 POI 搜索（评分/人均/营业时间/特色/电话/坐标/图片）
   route     多方式路径规划（步行/驾车/公交/骑行，含打车费/实时路况）
-  business  业务层 Mock（排队/券/票务，随虚拟时钟）—— 见 mocks/business_layer.json
 
 双模式：
   - 有 AMAP_KEY（环境变量或仓库根 .env）→ 调高德真接口
   - 无 key → 回落到 mocks/amap_fixtures.json 里的固定样本（demo 仍可跑、可复现）
-  business 子命令始终是 Mock（不依赖 key）。
 
-零外部依赖（仅标准库），跨平台。所有输出为 JSON 到 stdout：
+本文件只做高德地理能力，不含任何业务层 Mock（排队/券/票务）——
+业务层归 mocks/*.json + mocks/state_machine.py，由各 Skill 自己的 scripts 消费。
+详见 docs/design/shared-infra-alignment.md。
+
+可被其他 Skill 直接 import：`from scripts.amap import geocode, search_poi, route`
+（纯函数返回 (mode, data)；CLI 子命令再包一层 JSON 输出）。
+
+零外部依赖（仅标准库），跨平台。所有 CLI 输出为 JSON 到 stdout：
   成功 {"ok": true, "mode": "live|mock", "cmd": "...", "data": ...}
   失败 {"ok": false, "error": "...", "stage": "..."}（退出码非 0）
 """
@@ -25,7 +30,6 @@ import sys
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -103,29 +107,31 @@ def fail(stage, error):
 
 # ---------- geocode ----------
 
-def cmd_geocode(args):
+def geocode(address, city="北京"):
+    """地址 → 坐标。返回 (mode, data)。可被其他 Skill 直接 import。"""
     key = get_key()
     if not key:
         fixtures = load_fixture("amap_fixtures.json")
-        loc = fixtures.get("geocode", {}).get(args.address)
-        if not loc:
-            loc = fixtures.get("geocode", {}).get("_default")
-        return ok("geocode", "mock", {"address": args.address, "location": loc})
+        loc = fixtures.get("geocode", {}).get(address) or fixtures.get("geocode", {}).get("_default")
+        return "mock", {"address": address, "location": loc}
 
-    payload = amap_get("/v3/geocode/geo", {
-        "key": key, "address": args.address, "city": args.city,
-    })
+    payload = amap_get("/v3/geocode/geo", {"key": key, "address": address, "city": city})
     geocodes = payload.get("geocodes", [])
     if not geocodes:
-        fail("geocode", f"找不到地址：{args.address}")
+        raise RuntimeError(f"找不到地址：{address}")
     g = geocodes[0]
-    ok("geocode", "live", {
-        "address": args.address,
+    return "live", {
+        "address": address,
         "formatted_address": g.get("formatted_address"),
         "location": g.get("location"),
         "adcode": g.get("adcode"),
         "city": g.get("city") or g.get("province"),
-    })
+    }
+
+
+def cmd_geocode(args):
+    mode, data = geocode(args.address, args.city)
+    ok("geocode", mode, data)
 
 
 # ---------- search ----------
@@ -150,36 +156,42 @@ def _clean_poi(p):
     }
 
 
-def cmd_search(args):
+def search_poi(keyword, location=None, radius=2000, city="北京", types=None, limit=5):
+    """周边 / 关键字 POI 搜索。返回 (mode, data)。可被其他 Skill 直接 import。"""
     key = get_key()
     if not key:
         fixtures = load_fixture("amap_fixtures.json")
-        pois = fixtures.get("search", {}).get(args.keyword, [])
-        return ok("search", "mock", {"keyword": args.keyword, "count": len(pois), "pois": pois})
+        pois = fixtures.get("search", {}).get(keyword, [])
+        return "mock", {"keyword": keyword, "count": len(pois), "pois": pois}
 
     params = {
         "key": key,
-        "keywords": args.keyword,
+        "keywords": keyword,
         "show_fields": "business,photos",
-        "page_size": str(args.limit),
+        "page_size": str(limit),
         "page_num": "1",
     }
-    if args.location:
+    if location:
         # 有中心点 → 周边搜索
         path = "/v5/place/around"
-        params["location"] = args.location
-        params["radius"] = str(args.radius)
+        params["location"] = location
+        params["radius"] = str(radius)
     else:
         # 无中心点 → 关键字搜索
         path = "/v5/place/text"
-        params["region"] = args.city
+        params["region"] = city
         params["city_limit"] = "true"
-    if args.types:
-        params["types"] = args.types
+    if types:
+        params["types"] = types
 
     payload = amap_get(path, params)
     pois = [_clean_poi(p) for p in payload.get("pois", [])]
-    ok("search", "live", {"keyword": args.keyword, "count": len(pois), "pois": pois})
+    return "live", {"keyword": keyword, "count": len(pois), "pois": pois}
+
+
+def cmd_search(args):
+    mode, data = search_poi(args.keyword, args.location, args.radius, args.city, args.types, args.limit)
+    ok("search", mode, data)
 
 
 # ---------- route ----------
@@ -209,12 +221,12 @@ def _route_one(key, mode, origin, dest, city):
     except RuntimeError as exc:
         return {"mode": mode, "error": str(exc)}
 
-    route = payload.get("route", {})
+    route_obj = payload.get("route", {})
     result = {"mode": mode, "distance": None, "duration": None,
               "taxi_cost": None, "tmc_status": None}
 
     if mode == "transit":
-        transits = route.get("transits") or []
+        transits = route_obj.get("transits") or []
         if transits:
             t = transits[0]
             result["distance"] = t.get("distance")
@@ -222,14 +234,14 @@ def _route_one(key, mode, origin, dest, city):
             result["cost_yuan"] = (t.get("cost", {}) or {}).get("transit_fee")
         return result
 
-    paths = route.get("paths") or []
+    paths = route_obj.get("paths") or []
     if paths:
         p0 = paths[0]
         result["distance"] = p0.get("distance")
         cost = p0.get("cost", {}) or {}
         result["duration"] = cost.get("duration") or p0.get("duration")
         if mode == "driving":
-            result["taxi_cost"] = route.get("taxi_cost")
+            result["taxi_cost"] = route_obj.get("taxi_cost")
             tmcs = p0.get("tmcs") or []
             # 取占比最重的路况状态作为整体概览
             if tmcs:
@@ -239,103 +251,35 @@ def _route_one(key, mode, origin, dest, city):
     return result
 
 
-def cmd_route(args):
-    modes = [m.strip() for m in args.modes.split(",") if m.strip()]
+def route(origin, dest, modes="walking,driving,transit", city=None):
+    """多方式路径规划。modes 可传逗号串或列表。返回 (mode, data)。可被其他 Skill 直接 import。"""
+    mode_list = ([m.strip() for m in modes.split(",") if m.strip()]
+                 if isinstance(modes, str) else list(modes))
     key = get_key()
     if not key:
         fixtures = load_fixture("amap_fixtures.json")
         legs = fixtures.get("route", {}).get("_default", [])
-        legs = [leg for leg in legs if leg.get("mode") in modes] or legs
-        return ok("route", "mock",
-                  {"origin": args.origin, "destination": args.dest, "legs": legs})
+        legs = [leg for leg in legs if leg.get("mode") in mode_list] or legs
+        return "mock", {"origin": origin, "destination": dest, "legs": legs}
 
     # 多方式并行调用
-    with ThreadPoolExecutor(max_workers=len(modes) or 1) as pool:
+    with ThreadPoolExecutor(max_workers=len(mode_list) or 1) as pool:
         legs = list(pool.map(
-            lambda m: _route_one(key, m, args.origin, args.dest, args.city),
-            modes,
+            lambda m: _route_one(key, m, origin, dest, city),
+            mode_list,
         ))
-    ok("route", "live", {"origin": args.origin, "destination": args.dest, "legs": legs})
+    return "live", {"origin": origin, "destination": dest, "legs": legs}
 
 
-# ---------- business（业务层 Mock，随虚拟时钟）----------
-
-def virtual_now():
-    """虚拟时钟：优先 openclaw_helper/mock_clock.py，其次 MOCK_NOW 环境变量，最后真实时间。
-
-    与 Skill 1/2 共用的 openclaw_helper/mock_clock.py 落地后，这里统一改为调它。
-    """
-    sys.path.insert(0, str(REPO_ROOT / "openclaw_helper"))
-    try:
-        import mock_clock  # type: ignore
-        return mock_clock.now()
-    except Exception:
-        pass
-    mock_now = os.environ.get("MOCK_NOW")
-    if mock_now:
-        try:
-            return datetime.fromisoformat(mock_now)
-        except ValueError:
-            pass
-    return datetime.now()
-
-
-def _eval_queue(model, now):
-    """单调推进型排队：rush_start 为每日时段起点（time-of-day，与日期解耦）。
-
-    state(t) = max(0, initial - rate * (now 距当天 rush_start 的分钟数))。
-    """
-    rs = model.get("rush_start", "17:00")
-    t0 = now.replace(hour=int(rs[:2]), minute=int(rs[3:5]), second=0, microsecond=0)
-    minutes = max(0.0, (now - t0).total_seconds() / 60.0)
-    tables = max(0, round(model["initial"] - model["rate_per_min"] * minutes))
-    eta = round(tables * model.get("min_per_table", 2.0))
-    return tables, eta
-
-
-def _eval_coupon(coupons, now):
-    """时段型券：命中当前 hour 区间则返回券文案。"""
-    hour = now.hour
-    for c in coupons or []:
-        if c["start_hour"] <= hour < c["end_hour"]:
-            return c["text"]
-    return None
-
-
-def cmd_business(args):
-    data = load_fixture("business_layer.json")
-    entry = data.get(args.poi)
-    if entry is None:
-        # 名称模糊匹配
-        for k, v in data.items():
-            if args.poi in k or k in args.poi:
-                entry = v
-                break
-    now = virtual_now()
-    if entry is None:
-        return ok("business", "mock", {
-            "poi": args.poi, "virtual_now": now.isoformat(timespec="minutes"),
-            "queue_tables": None, "eta_minutes": None, "coupon": None, "ticket_left": None,
-            "note": "该 POI 无业务层数据",
-        })
-
-    result = {"poi": args.poi, "virtual_now": now.isoformat(timespec="minutes"),
-              "queue_tables": None, "eta_minutes": None, "coupon": None, "ticket_left": None}
-    if "queue" in entry:
-        tables, eta = _eval_queue(entry["queue"], now)
-        result["queue_tables"], result["eta_minutes"] = tables, eta
-    if "coupons" in entry:
-        result["coupon"] = _eval_coupon(entry["coupons"], now)
-    if "ticket" in entry:
-        tk = entry["ticket"]
-        result["ticket_left"] = tk.get("left")
-    ok("business", "mock", result)
+def cmd_route(args):
+    mode, data = route(args.origin, args.dest, args.modes, args.city)
+    ok("route", mode, data)
 
 
 # ---------- CLI ----------
 
 def build_parser():
-    p = argparse.ArgumentParser(description="高德 Web 服务包装层（Skill 3）")
+    p = argparse.ArgumentParser(description="高德 Web 服务包装层（全项目共享高德入口）")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     g = sub.add_parser("geocode", help="地址 → 坐标")
@@ -358,10 +302,6 @@ def build_parser():
     r.add_argument("--modes", default="walking,driving,transit")
     r.add_argument("--city", help="公交场景的城市 adcode，如 010")
     r.set_defaults(func=cmd_route)
-
-    b = sub.add_parser("business", help="业务层 Mock（排队/券/票务）")
-    b.add_argument("--poi", required=True, help="poi_id 或店名")
-    b.set_defaults(func=cmd_business)
 
     return p
 
