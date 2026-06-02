@@ -15,7 +15,12 @@
         "opentime_today": "10:00-24:00",
         "tel": "010-84756001",
         "business_area": "望京",
-        "aliases": ["海底捞", "hdl", "海底捞望京", "海底捞soho"]
+        "aliases": [
+          "海底捞",
+          "hdl",
+          "海底捞望京",
+          "海底捞soho"
+        ]
       }
     },
     {
@@ -30,7 +35,11 @@
         "opentime_today": "11:00-22:00",
         "tel": "010-84756002",
         "business_area": "望京",
-        "aliases": ["凑凑", "凑凑火锅", "凑凑望京"]
+        "aliases": [
+          "凑凑",
+          "凑凑火锅",
+          "凑凑望京"
+        ]
       }
     },
     {
@@ -45,7 +54,10 @@
         "opentime_today": "10:30-21:30",
         "tel": "010-84756003",
         "business_area": "望京",
-        "aliases": ["外婆家", "外婆家望京"]
+        "aliases": [
+          "外婆家",
+          "外婆家望京"
+        ]
       }
     },
     {
@@ -60,7 +72,11 @@
         "opentime_today": "10:00-22:00",
         "tel": "010-84756004",
         "business_area": "望京",
-        "aliases": ["大鸭梨", "大鸭梨烤鸭", "大鸭梨望京"]
+        "aliases": [
+          "大鸭梨",
+          "大鸭梨烤鸭",
+          "大鸭梨望京"
+        ]
       }
     },
     {
@@ -75,7 +91,11 @@
         "opentime_today": "11:00-22:00",
         "tel": "010-84756005",
         "business_area": "望京",
-        "aliases": ["探鱼", "探鱼烤鱼", "探鱼望京"]
+        "aliases": [
+          "探鱼",
+          "探鱼烤鱼",
+          "探鱼望京"
+        ]
       }
     },
     {
@@ -90,7 +110,11 @@
         "opentime_today": "10:00-22:00",
         "tel": "010-84756006",
         "business_area": "望京",
-        "aliases": ["西贝", "西贝莜面", "西贝望京"]
+        "aliases": [
+          "西贝",
+          "西贝莜面",
+          "西贝望京"
+        ]
       }
     },
     {
@@ -105,7 +129,11 @@
         "opentime_today": "10:30-21:30",
         "tel": "010-84756007",
         "business_area": "望京",
-        "aliases": ["太二", "太二酸菜鱼", "太二望京"]
+        "aliases": [
+          "太二",
+          "太二酸菜鱼",
+          "太二望京"
+        ]
       }
     },
     {
@@ -120,7 +148,11 @@
         "opentime_today": "11:00-22:00",
         "tel": "010-84756008",
         "business_area": "望京",
-        "aliases": ["呷哺", "呷哺呷哺", "呷哺望京"]
+        "aliases": [
+          "呷哺",
+          "呷哺呷哺",
+          "呷哺望京"
+        ]
       }
     },
     {
@@ -135,7 +167,10 @@
         "opentime_today": "11:00-22:30",
         "tel": "010-65907009",
         "business_area": "三里屯",
-        "aliases": ["小吊梨汤", "小吊梨汤三里屯"]
+        "aliases": [
+          "小吊梨汤",
+          "小吊梨汤三里屯"
+        ]
       }
     },
     {
@@ -150,7 +185,10 @@
         "opentime_today": "17:00-23:00",
         "tel": "010-65907010",
         "business_area": "三里屯",
-        "aliases": ["猫餐厅", "胡同里的猫"]
+        "aliases": [
+          "猫餐厅",
+          "胡同里的猫"
+        ]
       }
     },
     {
@@ -165,7 +203,11 @@
         "opentime_today": "10:30-21:00",
         "tel": "010-64393011",
         "business_area": "望京",
-        "aliases": ["旺顺阁", "鱼头泡饼", "旺顺阁望京"]
+        "aliases": [
+          "旺顺阁",
+          "鱼头泡饼",
+          "旺顺阁望京"
+        ]
       }
     },
     {
@@ -180,7 +222,10 @@
         "opentime_today": "11:00-23:00",
         "tel": "010-84756012",
         "business_area": "望京",
-        "aliases": ["蜀大侠", "蜀大侠火锅"]
+        "aliases": [
+          "蜀大侠",
+          "蜀大侠火锅"
+        ]
       }
     },
     {
@@ -195,7 +240,11 @@
         "opentime_today": "11:00-22:00",
         "tel": "010-65907013",
         "business_area": "三里屯",
-        "aliases": ["松哥油焖大虾", "松哥虾", "松哥三里屯"]
+        "aliases": [
+          "松哥油焖大虾",
+          "松哥虾",
+          "松哥三里屯"
+        ]
       }
     },
     {
@@ -210,7 +259,11 @@
         "opentime_today": "11:00-22:30",
         "tel": "010-65057014",
         "business_area": "国贸",
-        "aliases": ["渝是乎", "渝是乎火锅", "渝是乎国贸"]
+        "aliases": [
+          "渝是乎",
+          "渝是乎火锅",
+          "渝是乎国贸"
+        ]
       }
     },
     {
@@ -225,7 +278,11 @@
         "opentime_today": "10:00-22:00",
         "tel": "010-65057015",
         "business_area": "国贸",
-        "aliases": ["鹿港小镇", "鹿港", "鹿港国贸"]
+        "aliases": [
+          "鹿港小镇",
+          "鹿港",
+          "鹿港国贸"
+        ]
       }
     },
     {
@@ -240,7 +297,11 @@
         "opentime_today": "10:00-22:00",
         "tel": "010-84756016",
         "business_area": "望京",
-        "aliases": ["眉州东坡", "眉州", "眉州望京"]
+        "aliases": [
+          "眉州东坡",
+          "眉州",
+          "眉州望京"
+        ]
       }
     },
     {
@@ -255,7 +316,11 @@
         "opentime_today": "09:00-21:00",
         "tel": "010-84756017",
         "business_area": "望京",
-        "aliases": ["炸酱面大王", "老北京炸酱面", "炸酱面望京"]
+        "aliases": [
+          "炸酱面大王",
+          "老北京炸酱面",
+          "炸酱面望京"
+        ]
       }
     },
     {
@@ -270,7 +335,11 @@
         "opentime_today": "17:00-24:00",
         "tel": "010-65907018",
         "business_area": "三里屯",
-        "aliases": ["朱光玉", "朱光玉火锅", "朱光玉三里屯"]
+        "aliases": [
+          "朱光玉",
+          "朱光玉火锅",
+          "朱光玉三里屯"
+        ]
       }
     },
     {
@@ -285,7 +354,10 @@
         "opentime_today": "11:00-22:00",
         "tel": "010-65907019",
         "business_area": "三里屯",
-        "aliases": ["湊湊三里屯", "湊湊太古里"]
+        "aliases": [
+          "湊湊三里屯",
+          "湊湊太古里"
+        ]
       }
     },
     {
@@ -300,7 +372,11 @@
         "opentime_today": "11:00-22:00",
         "tel": "010-84756020",
         "business_area": "望京",
-        "aliases": ["奥琦玛", "潮汕牛肉火锅", "奥琦玛望京"]
+        "aliases": [
+          "奥琦玛",
+          "潮汕牛肉火锅",
+          "奥琦玛望京"
+        ]
       }
     },
     {
@@ -315,7 +391,11 @@
         "opentime_today": "17:00-23:00",
         "tel": "010-84756021",
         "business_area": "望京",
-        "aliases": ["木屋烧烤", "木屋", "木屋望京"]
+        "aliases": [
+          "木屋烧烤",
+          "木屋",
+          "木屋望京"
+        ]
       }
     },
     {
@@ -330,7 +410,10 @@
         "opentime_today": "10:00-22:00",
         "tel": "010-65907022",
         "business_area": "三里屯",
-        "aliases": ["九毛九", "九毛九三里屯"]
+        "aliases": [
+          "九毛九",
+          "九毛九三里屯"
+        ]
       }
     },
     {
@@ -345,7 +428,11 @@
         "opentime_today": "10:00-22:00",
         "tel": "010-84756023",
         "business_area": "望京",
-        "aliases": ["夸父炸串", "夸父", "炸串望京"]
+        "aliases": [
+          "夸父炸串",
+          "夸父",
+          "炸串望京"
+        ]
       }
     },
     {
@@ -360,7 +447,11 @@
         "opentime_today": "10:30-21:30",
         "tel": "010-84756024",
         "business_area": "望京",
-        "aliases": ["费大厨", "辣椒炒肉", "费大厨望京"]
+        "aliases": [
+          "费大厨",
+          "辣椒炒肉",
+          "费大厨望京"
+        ]
       }
     },
     {
@@ -375,7 +466,11 @@
         "opentime_today": "10:00-22:00",
         "tel": "010-84756025",
         "business_area": "望京",
-        "aliases": ["仝小闹", "仝小闹麻辣烫", "麻辣烫望京"]
+        "aliases": [
+          "仝小闹",
+          "仝小闹麻辣烫",
+          "麻辣烫望京"
+        ]
       }
     }
   ],
@@ -387,7 +482,7 @@
       "params": {
         "initial_queue": 32,
         "rate_per_minute": 0.45,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rush_start": "18:00"
       }
     },
     {
@@ -397,7 +492,7 @@
       "params": {
         "initial_queue": 22,
         "rate_per_minute": 0.55,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rush_start": "18:00"
       }
     },
     {
@@ -406,8 +501,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 12,
-        "rate_per_minute": 0.80,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.8,
+        "rush_start": "18:00"
       }
     },
     {
@@ -416,11 +511,41 @@
       "type": "periodic",
       "params": {
         "segments": [
-          { "hour_range": [10, 13], "queue": 8 },
-          { "hour_range": [13, 17], "queue": 3 },
-          { "hour_range": [17, 19], "queue": 15 },
-          { "hour_range": [19, 21], "queue": 28 },
-          { "hour_range": [21, 22], "queue": 10 }
+          {
+            "hour_range": [
+              10,
+              13
+            ],
+            "queue": 8
+          },
+          {
+            "hour_range": [
+              13,
+              17
+            ],
+            "queue": 3
+          },
+          {
+            "hour_range": [
+              17,
+              19
+            ],
+            "queue": 15
+          },
+          {
+            "hour_range": [
+              19,
+              21
+            ],
+            "queue": 28
+          },
+          {
+            "hour_range": [
+              21,
+              22
+            ],
+            "queue": 10
+          }
         ],
         "default_queue": 0
       }
@@ -431,8 +556,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 18,
-        "rate_per_minute": 0.60,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.6,
+        "rush_start": "18:00"
       }
     },
     {
@@ -441,8 +566,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 20,
-        "rate_per_minute": 0.50,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.5,
+        "rush_start": "18:00"
       }
     },
     {
@@ -451,8 +576,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 10,
-        "rate_per_minute": 0.90,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.9,
+        "rush_start": "18:00"
       }
     },
     {
@@ -469,10 +594,34 @@
       "type": "periodic",
       "params": {
         "segments": [
-          { "hour_range": [11, 14], "queue": 6 },
-          { "hour_range": [17, 19], "queue": 12 },
-          { "hour_range": [19, 21], "queue": 22 },
-          { "hour_range": [21, 22], "queue": 8 }
+          {
+            "hour_range": [
+              11,
+              14
+            ],
+            "queue": 6
+          },
+          {
+            "hour_range": [
+              17,
+              19
+            ],
+            "queue": 12
+          },
+          {
+            "hour_range": [
+              19,
+              21
+            ],
+            "queue": 22
+          },
+          {
+            "hour_range": [
+              21,
+              22
+            ],
+            "queue": 8
+          }
         ],
         "default_queue": 0
       }
@@ -484,7 +633,7 @@
       "params": {
         "initial_queue": 15,
         "rate_per_minute": 0.35,
-        "t0": "2026-06-07T17:00:00+08:00"
+        "rush_start": "17:00"
       }
     },
     {
@@ -493,8 +642,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 24,
-        "rate_per_minute": 0.50,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.5,
+        "rush_start": "18:00"
       }
     },
     {
@@ -503,8 +652,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 28,
-        "rate_per_minute": 0.40,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.4,
+        "rush_start": "18:00"
       }
     },
     {
@@ -514,7 +663,7 @@
       "params": {
         "initial_queue": 16,
         "rate_per_minute": 0.55,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rush_start": "18:00"
       }
     },
     {
@@ -523,11 +672,41 @@
       "type": "periodic",
       "params": {
         "segments": [
-          { "hour_range": [11, 13], "queue": 14 },
-          { "hour_range": [13, 17], "queue": 4 },
-          { "hour_range": [17, 19], "queue": 18 },
-          { "hour_range": [19, 21], "queue": 30 },
-          { "hour_range": [21, 22], "queue": 12 }
+          {
+            "hour_range": [
+              11,
+              13
+            ],
+            "queue": 14
+          },
+          {
+            "hour_range": [
+              13,
+              17
+            ],
+            "queue": 4
+          },
+          {
+            "hour_range": [
+              17,
+              19
+            ],
+            "queue": 18
+          },
+          {
+            "hour_range": [
+              19,
+              21
+            ],
+            "queue": 30
+          },
+          {
+            "hour_range": [
+              21,
+              22
+            ],
+            "queue": 12
+          }
         ],
         "default_queue": 0
       }
@@ -538,8 +717,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 14,
-        "rate_per_minute": 0.60,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.6,
+        "rush_start": "18:00"
       }
     },
     {
@@ -549,7 +728,7 @@
       "params": {
         "initial_queue": 19,
         "rate_per_minute": 0.55,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rush_start": "18:00"
       }
     },
     {
@@ -558,8 +737,20 @@
       "type": "periodic",
       "params": {
         "segments": [
-          { "hour_range": [11, 13], "queue": 10 },
-          { "hour_range": [18, 20], "queue": 6 }
+          {
+            "hour_range": [
+              11,
+              13
+            ],
+            "queue": 10
+          },
+          {
+            "hour_range": [
+              18,
+              20
+            ],
+            "queue": 6
+          }
         ],
         "default_queue": 0
       }
@@ -571,7 +762,7 @@
       "params": {
         "initial_queue": 35,
         "rate_per_minute": 0.38,
-        "t0": "2026-06-07T17:00:00+08:00"
+        "rush_start": "17:00"
       }
     },
     {
@@ -580,8 +771,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 20,
-        "rate_per_minute": 0.50,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.5,
+        "rush_start": "18:00"
       }
     },
     {
@@ -591,7 +782,7 @@
       "params": {
         "initial_queue": 38,
         "rate_per_minute": 0.42,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rush_start": "18:00"
       }
     },
     {
@@ -601,7 +792,7 @@
       "params": {
         "initial_queue": 16,
         "rate_per_minute": 0.48,
-        "t0": "2026-06-07T17:00:00+08:00"
+        "rush_start": "17:00"
       }
     },
     {
@@ -610,8 +801,8 @@
       "type": "monotonic_decay",
       "params": {
         "initial_queue": 8,
-        "rate_per_minute": 0.70,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rate_per_minute": 0.7,
+        "rush_start": "18:00"
       }
     },
     {
@@ -629,7 +820,7 @@
       "params": {
         "initial_queue": 25,
         "rate_per_minute": 0.52,
-        "t0": "2026-06-07T18:00:00+08:00"
+        "rush_start": "18:00"
       }
     },
     {
@@ -761,50 +952,6 @@
       "event": "jump",
       "delta": -3,
       "reason": "预订桌 18:15 集中到店，推动散客队列前进"
-    }
-  ],
-  "coupons": [
-    {
-      "shop_id": "shop-001",
-      "description": "满 300 减 50",
-      "valid_time": "18:00-21:00",
-      "stock": 50
-    },
-    {
-      "shop_id": "shop-003",
-      "description": "周末立减 15 元",
-      "valid_time": "all_day",
-      "stock": 100
-    },
-    {
-      "shop_id": "shop-007",
-      "description": "新客 9 折",
-      "valid_time": "all_day",
-      "stock": 200
-    },
-    {
-      "shop_id": "shop-012",
-      "description": "满 200 减 30，辣度加 1 格免费",
-      "valid_time": "18:00-22:00",
-      "stock": 30
-    },
-    {
-      "shop_id": "shop-019",
-      "description": "满 200 减 50（会员专属）",
-      "valid_time": "19:00-22:00",
-      "stock": 40
-    },
-    {
-      "shop_id": "shop-024",
-      "description": "双人套餐 9 折",
-      "valid_time": "17:00-21:00",
-      "stock": 60
-    },
-    {
-      "shop_id": "shop-020",
-      "description": "鲜牛肉拼盘第二份半价",
-      "valid_time": "18:00-21:00",
-      "stock": 20
     }
   ]
 }

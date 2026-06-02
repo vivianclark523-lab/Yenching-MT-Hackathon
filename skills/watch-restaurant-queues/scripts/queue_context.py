@@ -37,9 +37,14 @@ sys.path.insert(0, str(_REPO_ROOT))
 from mocks.clock import virtual_now, set_virtual_time, TZ_BEIJING
 from mocks.state_machine import build_for_shop
 
+# 地理能力（高德路径规划等）由共享模块 scripts/amap.py 提供，Skill 3 负责实现。
+# 待 Skill 3 的 amap.py 合入 main 后，按需接入：
+#   from scripts.amap import search_poi, route
+
 # ——— 数据加载 ———
 
-_DATA_FILE = _REPO_ROOT / "mocks" / "restaurants.json"
+_DATA_FILE    = _REPO_ROOT / "mocks" / "restaurants.json"
+_COUPONS_FILE = _REPO_ROOT / "mocks" / "coupons.json"
 
 
 def _load_data() -> dict:
@@ -49,25 +54,34 @@ def _load_data() -> dict:
         return json.load(f)
 
 
+def _load_coupons() -> dict:
+    if not _COUPONS_FILE.exists():
+        return {"items": []}
+    with open(_COUPONS_FILE, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def _get_shop(data: dict, shop_id: str) -> dict | None:
     return next((s for s in data["items"] if s["id"] == shop_id), None)
 
 
 def _get_coupon(data: dict, shop_id: str, t: datetime) -> str | None:
-    """返回当前时刻可用的券描述，无则 None。"""
+    """返回当前时刻可用的券描述，无则 None。从 mocks/coupons.json 读取。"""
+    coupons_data = _load_coupons()
     hour_min = t.hour + t.minute / 60
-    for c in data.get("coupons", []):
-        if c["shop_id"] != shop_id:
+    for c in coupons_data.get("items", []):
+        f = c.get("fields", {})
+        if f.get("shop_id") != shop_id:
             continue
-        valid = c.get("valid_time", "all_day")
+        valid = f.get("valid_time", "all_day")
         if valid == "all_day":
-            return c["description"]
+            return f.get("description")
         try:
             parts = valid.split("-")
             start = float(parts[0].split(":")[0]) + float(parts[0].split(":")[1]) / 60
             end = float(parts[1].split(":")[0]) + float(parts[1].split(":")[1]) / 60
             if start <= hour_min < end:
-                return c["description"]
+                return f.get("description")
         except (IndexError, ValueError):
             continue
     return None

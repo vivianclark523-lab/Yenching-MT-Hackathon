@@ -76,16 +76,32 @@ class MonotonicDecayMachine(BaseStateMachine):
     排队桌数随时间线性递减，可叠加事件。
 
     公式：queue(t) = max(0, initial_queue - rate_per_minute × elapsed_minutes + Σ applied_events.delta)
+
+    锚定方式（二选一，rush_start 优先）：
+        rush_start: "HH:MM"  — 按查询时间 t 当天的该时刻为 t0（日期无关，扛换日期）
+        t0: ISO 8601 字符串 — 绝对时刻锚定（向后兼容）
     """
 
     def __init__(self, params: dict[str, Any], events: list[dict]) -> None:
         self.initial_queue: int = int(params.get("initial_queue", 20))
         self.rate_per_minute: float = float(params.get("rate_per_minute", 0.5))
-        self.t0: datetime = _parse_iso(params["t0"])
+        self.rush_start: str | None = params.get("rush_start")          # "HH:MM"，优先
+        self._t0_abs: datetime | None = (
+            _parse_iso(params["t0"]) if "t0" in params else None
+        )
         self.events = sorted(events, key=lambda e: _parse_iso(e["time"]))
 
     def state_at(self, t: datetime) -> int:
-        elapsed = max(0.0, (t - self.t0).total_seconds() / 60)
+        # 计算 t0：rush_start 时段锚定（日期无关）优先于绝对 t0
+        if self.rush_start:
+            hh, mm = self.rush_start.split(":")
+            t0 = t.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
+        elif self._t0_abs is not None:
+            t0 = self._t0_abs
+        else:
+            raise ValueError("MonotonicDecayMachine 需要 rush_start 或 t0 参数")
+
+        elapsed = max(0.0, (t - t0).total_seconds() / 60)
         base = self.initial_queue - self.rate_per_minute * elapsed
 
         # 叠加已到达的事件

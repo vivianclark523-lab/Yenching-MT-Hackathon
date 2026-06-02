@@ -4,9 +4,11 @@ mocks/clock.py — 共享虚拟时钟（所有 Skill 必须通过此模块获取
 用法：
     from mocks.clock import virtual_now, set_virtual_time, reset_virtual_time
 
-原理：
-    - 默认返回真实时间（沙盒未介入时）
-    - 沙盒 UI 通过写 ~/.openclaw/sandbox/virtual_clock.json 覆盖当前虚拟时间
+原理（优先级从高到低）：
+    1. 进程内 set_virtual_time() 覆盖（最高优先，测试代码直接注入）
+    2. 沙盒 UI 通过写 ~/.openclaw/sandbox/virtual_clock.json 覆盖（fixed/offset/realtime）
+    3. 环境变量 MOCK_NOW="2026-06-07T19:00:00+08:00"（轻量 CLI 测试用）
+    4. 真实系统时间（最终 fallback）
     - 所有 Skill 共享同一个时钟，保证 3 Skill 联动时时间同步
 
 禁止：
@@ -46,7 +48,8 @@ def virtual_now() -> datetime:
     优先级：
     1. 进程内 set_virtual_time() 覆盖
     2. 沙盒覆盖文件 virtual_clock.json
-    3. 真实系统时间（fallback）
+    3. 环境变量 MOCK_NOW（ISO 8601 字符串，轻量测试用）
+    4. 真实系统时间（fallback）
     """
     global _override_time
 
@@ -71,10 +74,18 @@ def virtual_now() -> datetime:
                 return datetime.now(TZ_BEIJING) + timedelta(seconds=offset)
 
     except Exception:
-        # 文件损坏 / 解析失败 → 静默 fallback 到真实时间
+        # 文件损坏 / 解析失败 → 静默 fallback
         pass
 
-    # 3. 真实时间
+    # 3. 环境变量 MOCK_NOW（如 MOCK_NOW="2026-06-07T19:00:00+08:00"）
+    mock_now_env = os.environ.get("MOCK_NOW", "").strip()
+    if mock_now_env:
+        try:
+            return _parse_iso(mock_now_env)
+        except Exception:
+            pass  # 格式错误 → 静默 fallback
+
+    # 4. 真实时间
     return datetime.now(TZ_BEIJING)
 
 
