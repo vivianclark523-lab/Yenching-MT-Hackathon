@@ -301,7 +301,7 @@ metadata:
 > - `scripts/amap.py` — 高德包装层，**真 key（`AMAP_KEY` env）/ Mock fixture 双模式**，没 key 也能跑 demo（D1/D4）
 > - `scripts/route_planner.py` — 多节点路线 planner（枚举/剪枝/时间可行性/4套路），内部调 amap.py 路径、并行+缓存（D4）
 > - `scripts/imagegen.py` — 豆包文生图 + 文字 fallback（D4，读 `ARK_API_KEY`）
-> - `skills/route-planning-sharing/scripts/business_context.py` + `mocks/business_layer.json` — 业务层 Mock（排队/券/票务）；虚拟时钟统一走共享 `mocks/clock.py`（未就绪时本地兜底，见 docs/design/shared-infra-alignment.md）
+> - `skills/route-planning-sharing/scripts/business_context.py` — 业务层 Mock（排队/券/票务），数据与 Skill 1 同源：共享 `mocks/restaurants.json` + `mocks/coupons.json` + `mocks/user_orders.json`，状态机走 `mocks/state_machine.py`、虚拟时钟走 `mocks/clock.py`（见 docs/design/shared-infra-alignment.md）
 
 ---
 
