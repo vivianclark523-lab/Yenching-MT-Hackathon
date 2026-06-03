@@ -31,6 +31,21 @@
 - ❌ **没有脱敏数据** —— 所有 API 自己 Mock；冯岩明确鼓励用 LLM 来 Mock
 - ⚡ **现场风险**：评委会**临场拨虚拟时间、临场换 case** —— demo 必须扛得住
 
+### ⚠️ 写共享代码前的硬边界速查（已踩过的坑，必看）
+
+> 本文件（CLAUDE.md）会被 Claude Code 自动注入上下文，但 [`README.md`](README.md) **不会**。
+> 历史上 Skill 代码反复偏离 README 约定，根因就是没主动打开它。
+> **写任何代码前必须先 `Read README.md`**（结构 §1 + 共享基建 §5）。以下是已经踩过的高频边界：
+
+- `scripts/amap.py` = **高德地理能力专用**（geocode / search / route）的**单一共享入口**。
+  ❌ 不要把排队 / 券 / 票务等业务 mock 塞进 amap.py；❌ 不要为业务层另起 `scripts/business.py`。
+- 业务层 mock = `mocks/restaurants.json`（排队）+ `mocks/coupons.json`（券）+ `mocks/user_orders.json`（订单 / 票务 / 充电宝），
+  全部走 §2.1 标准 schema，引擎统一用 `mocks/state_machine.py`，由**各 Skill 自己的 `skills/<name>/scripts/*.py`** 消费。
+- 虚拟时钟唯一入口 `from mocks.clock import virtual_now`。
+  ❌ 不要内联 `virtual_now()`；❌ 不要新建 `openclaw_helper/` `helper/` `utils/` 等目录（README §1 明令禁止）。
+
+> 📐 共享基建的完整架构 + 数据来源约定见 [`docs/design/shared-infra-alignment.md`](docs/design/shared-infra-alignment.md)。
+
 ---
 
 ## 二、Mock 状态机设计模式（核心工程模式）
