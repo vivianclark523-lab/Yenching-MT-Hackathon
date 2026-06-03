@@ -472,6 +472,44 @@
           "麻辣烫望京"
         ]
       }
+    },
+    {
+      "id": "shop-026",
+      "name": "老诚一锅羊蝎子·望京店",
+      "fields": {
+        "cuisine": "羊蝎子火锅",
+        "cost_per_person": 95,
+        "rating": 4.5,
+        "location": "116.4738,40.0012",
+        "address": "北京市朝阳区望京街道阜安西路 9 号",
+        "opentime_today": "11:00-22:00",
+        "tel": "010-84756026",
+        "business_area": "望京",
+        "aliases": [
+          "老诚一锅",
+          "羊蝎子",
+          "老诚一锅羊蝎子"
+        ]
+      }
+    },
+    {
+      "id": "shop-027",
+      "name": "京门老爆三·望京西园店",
+      "fields": {
+        "cuisine": "京味家常菜",
+        "cost_per_person": 70,
+        "rating": 4.4,
+        "location": "116.4651,40.0008",
+        "address": "北京市朝阳区望京西园三区 318 号楼",
+        "opentime_today": "10:30-22:00",
+        "tel": "010-84756027",
+        "business_area": "望京",
+        "aliases": [
+          "京门老爆三",
+          "老爆三",
+          "京门"
+        ]
+      }
     }
   ],
   "state_machines": [
@@ -829,6 +867,26 @@
       "type": "event_driven",
       "params": {
         "base_queue": 4
+      }
+    },
+    {
+      "_comment": "shop-026 老诚一锅：迁自 Skill 3 business_layer，中流量慢衰减",
+      "target_id": "shop-026",
+      "type": "monotonic_decay",
+      "params": {
+        "initial_queue": 18,
+        "rate_per_minute": 0.2,
+        "rush_start": "17:30"
+      }
+    },
+    {
+      "_comment": "shop-027 京门老爆三：迁自 Skill 3 business_layer，小店低流量",
+      "target_id": "shop-027",
+      "type": "monotonic_decay",
+      "params": {
+        "initial_queue": 12,
+        "rate_per_minute": 0.15,
+        "rush_start": "17:30"
       }
     }
   ],

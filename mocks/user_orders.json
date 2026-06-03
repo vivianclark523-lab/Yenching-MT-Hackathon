@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "user_orders",
+  "_comment": "票务 / 订单 / 充电宝等业务对象（README §1 列的第三个业务数据文件）。嘉禾望京影院黄金场余票迁自 Skill 3 business_layer，用单调递减库存型（rush_start 17:00 起售加速，18:30 恰好剩 4 张），与日期解耦——评委拨任意日期都对。",
+  "items": [
+    {
+      "id": "cinema-001",
+      "name": "嘉禾望京影院",
+      "fields": {
+        "category": "movie_ticket",
+        "showtime_today": "19:30",
+        "hall": "IMAX 1 厅",
+        "location": "116.4719,39.9968",
+        "address": "北京市朝阳区望京街道望京新荟城购物中心 4F",
+        "business_area": "望京"
+      }
+    }
+  ],
+  "state_machines": [
+    {
+      "_comment": "cinema-001 黄金场余票：初始 22 张，售罄速率 0.2/分钟，rush_start 17:00 → 18:30 恰好剩 4 张",
+      "target_id": "cinema-001",
+      "type": "monotonic_decay",
+      "params": {
+        "initial_queue": 22,
+        "rate_per_minute": 0.2,
+        "rush_start": "17:00"
+      }
+    }
+  ],
+  "events": []
+}

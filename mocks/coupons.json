@@ -71,6 +71,16 @@
         "stock": 20,
         "valid_time": "18:00-21:00"
       }
+    },
+    {
+      "id": "coupon-008",
+      "name": "午市 招牌套餐 8 折",
+      "fields": {
+        "shop_id": "shop-027",
+        "description": "午市 招牌套餐 8 折",
+        "stock": 80,
+        "valid_time": "11:00-14:00"
+      }
     }
   ],
   "state_machines": [
@@ -179,6 +189,22 @@
             "hour_range": [
               18,
               21
+            ],
+            "active": 1
+          }
+        ],
+        "default": 0
+      }
+    },
+    {
+      "target_id": "coupon-008",
+      "type": "periodic",
+      "params": {
+        "segments": [
+          {
+            "hour_range": [
+              11,
+              14
             ],
             "active": 1
           }

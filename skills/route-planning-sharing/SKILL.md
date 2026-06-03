@@ -86,7 +86,7 @@ metadata:
 4. **拉天气**（天气影响推荐时，如户外/雨天）：`curl -s "https://wttr.in/<城市>?format=j1"` 或复用内置 `weather` skill。
 5. **叠加业务层**（涉及排队/券/票务时）— Mock，随虚拟时钟：
    ```bash
-   python3 scripts/amap.py business --poi "<poi_id 或店名>"
+   python3 skills/route-planning-sharing/scripts/business_context.py --poi "<poi_id 或店名>"
    ```
    返回（**可能为空——不是每家都有业务层数据**）：
    - `queue_tables`：当前排队桌数（随虚拟时钟变化）
@@ -292,7 +292,7 @@ metadata:
 | `python3 scripts/amap.py geocode --address "<地址>"` | 地址 → 坐标 |
 | `python3 scripts/amap.py search --keyword "<品类>" --location "<lng,lat>" --radius <米>` | 周边 POI 搜索 |
 | `python3 scripts/amap.py route --origin "<lng,lat>" --dest "<lng,lat>" --modes walking,driving,transit` | 多方式路径规划 |
-| `python3 scripts/amap.py business --poi "<poi_id 或店名>"` | 业务层 Mock（排队/券/票务，随虚拟时钟） |
+| `python3 skills/route-planning-sharing/scripts/business_context.py --poi "<poi_id 或店名>"` | 业务层 Mock（排队/券/票务，随虚拟时钟） |
 | `python3 scripts/route_planner.py --origin "<lng,lat>" --depart "<时间>" --stops '<JSON>' --anchors '<JSON>'` | 多节点路线规划：枚举+剪枝+时间可行性+4套路，返回 3-4 条路线 |
 | `curl -s "https://wttr.in/<城市>?format=j1"` | 当日天气 |
 | `python3 scripts/imagegen.py card --spec '<JSON>' --out <路径>` | 文生图小结卡片（豆包 + fallback） |
@@ -301,7 +301,7 @@ metadata:
 > - `scripts/amap.py` — 高德包装层，**真 key（`AMAP_KEY` env）/ Mock fixture 双模式**，没 key 也能跑 demo（D1/D4）
 > - `scripts/route_planner.py` — 多节点路线 planner（枚举/剪枝/时间可行性/4套路），内部调 amap.py 路径、并行+缓存（D4）
 > - `scripts/imagegen.py` — 豆包文生图 + 文字 fallback（D4，读 `ARK_API_KEY`）
-> - `openclaw_helper/mock_clock.py` + `mocks/business_layer.json` — 与 Skill 1/2 共用虚拟时钟与业务层 Mock
+> - `skills/route-planning-sharing/scripts/business_context.py` — 业务层 Mock（排队/券/票务），数据与 Skill 1 同源：共享 `mocks/restaurants.json` + `mocks/coupons.json` + `mocks/user_orders.json`，状态机走 `mocks/state_machine.py`、虚拟时钟走 `mocks/clock.py`（见 docs/design/shared-infra-alignment.md）
 
 ---
 
