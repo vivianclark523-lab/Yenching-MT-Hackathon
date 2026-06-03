@@ -1,0 +1,4 @@
+# Skill 3 imagegen 卡片渲染依赖
+Pillow>=10.0
+# 高德/即梦 HTTPS 在 macOS 下的 CA 证书（amap.py / imagegen.py 用）
+certifi>=2024.0
