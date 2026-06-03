@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "kind": "coupons",
+  "items": [
+    {
+      "id": "coupon-001",
+      "name": "满 300 减 50",
+      "fields": {
+        "shop_id": "shop-001",
+        "description": "满 300 减 50",
+        "stock": 50,
+        "valid_time": "18:00-21:00"
+      }
+    },
+    {
+      "id": "coupon-002",
+      "name": "周末立减 15 元",
+      "fields": {
+        "shop_id": "shop-003",
+        "description": "周末立减 15 元",
+        "stock": 100,
+        "valid_time": "all_day"
+      }
+    },
+    {
+      "id": "coupon-003",
+      "name": "新客 9 折",
+      "fields": {
+        "shop_id": "shop-007",
+        "description": "新客 9 折",
+        "stock": 200,
+        "valid_time": "all_day"
+      }
+    },
+    {
+      "id": "coupon-004",
+      "name": "满 200 减 30，辣度加 1 格免费",
+      "fields": {
+        "shop_id": "shop-012",
+        "description": "满 200 减 30，辣度加 1 格免费",
+        "stock": 30,
+        "valid_time": "18:00-22:00"
+      }
+    },
+    {
+      "id": "coupon-005",
+      "name": "满 200 减 50（会员专属）",
+      "fields": {
+        "shop_id": "shop-019",
+        "description": "满 200 减 50（会员专属）",
+        "stock": 40,
+        "valid_time": "19:00-22:00"
+      }
+    },
+    {
+      "id": "coupon-006",
+      "name": "双人套餐 9 折",
+      "fields": {
+        "shop_id": "shop-024",
+        "description": "双人套餐 9 折",
+        "stock": 60,
+        "valid_time": "17:00-21:00"
+      }
+    },
+    {
+      "id": "coupon-007",
+      "name": "鲜牛肉拼盘第二份半价",
+      "fields": {
+        "shop_id": "shop-020",
+        "description": "鲜牛肉拼盘第二份半价",
+        "stock": 20,
+        "valid_time": "18:00-21:00"
+      }
+    }
+  ],
+  "state_machines": [
+    {
+      "target_id": "coupon-001",
+      "type": "periodic",
+      "params": {
+        "segments": [
+          {
+            "hour_range": [
+              18,
+              21
+            ],
+            "active": 1
+          }
+        ],
+        "default": 0
+      }
+    },
+    {
+      "target_id": "coupon-002",
+      "type": "periodic",
+      "params": {
+        "segments": [
+          {
+            "hour_range": [
+              0,
+              24
+            ],
+            "active": 1
+          }
+        ],
+        "default": 0
+      }
+    },
+    {
+      "target_id": "coupon-003",
+      "type": "periodic",
+      "params": {
+        "segments": [
+          {
+            "hour_range": [
+              0,
+              24
+            ],
+            "active": 1
+          }
+        ],
+        "default": 0
+      }
+    },
+    {
+      "target_id": "coupon-004",
+      "type": "periodic",
+      "params": {
+        "segments": [
+          {
+            "hour_range": [
+              18,
+              22
+            ],
+            "active": 1
+          }
+        ],
+        "default": 0
+      }
+    },
+    {
+      "target_id": "coupon-005",
+      "type": "periodic",
+      "params": {
+        "segments": [
+          {
+            "hour_range": [
+              19,
+              22
+            ],
+            "active": 1
+          }
+        ],
+        "default": 0
+      }
+    },
+    {
+      "target_id": "coupon-006",
+      "type": "periodic",
+      "params": {
+        "segments": [
+          {
+            "hour_range": [
+              17,
+              21
+            ],
+            "active": 1
+          }
+        ],
+        "default": 0
+      }
+    },
+    {
+      "target_id": "coupon-007",
+      "type": "periodic",
+      "params": {
+        "segments": [
+          {
+            "hour_range": [
+              18,
+              21
+            ],
+            "active": 1
+          }
+        ],
+        "default": 0
+      }
+    }
+  ],
+  "events": []
+}
