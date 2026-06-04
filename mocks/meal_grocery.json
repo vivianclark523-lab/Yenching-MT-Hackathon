@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "kind": "meal_grocery",
+  "_comment": "Skill 2 智能外卖与采购助手专用 Mock：历史外卖、菜品、配送、用户画像、采购周期。餐厅基础信息仍以 restaurants.json 为准。",
+  "items": [
+    {
+      "id": "profile-001",
+      "name": "Lilian 默认画像",
+      "fields": {
+        "home_area": "望京",
+        "default_budget_cents": 4500,
+        "premium_budget_cents": 8500,
+        "spice_preference": "medium",
+        "chain_preference": "medium_high",
+        "prepared_food_sensitivity": "high",
+        "dine_in_priority": "low_for_takeout",
+        "preferred_cuisines": ["川菜", "酸菜鱼", "湘菜", "面食", "北京菜"],
+        "avoid_cuisines": ["重油火锅连续两天", "预制菜风险高"],
+        "delivery_address": "望京 SOHO 附近",
+        "usual_meal_times": ["12:10", "18:40"]
+      }
+    },
+    {
+      "id": "ctx-001",
+      "name": "今日上下文",
+      "fields": {
+        "yesterday_shop_ids": ["shop-024"],
+        "yesterday_dishes": ["辣椒炒肉双拼饭"],
+        "tomorrow_events": [
+          {
+            "time": "19:00",
+            "category": "火锅",
+            "title": "朋友火锅局"
+          }
+        ],
+        "weather": "hot",
+        "city": "北京",
+        "traveling": false
+      }
+    },
+    {
+      "id": "dish-001",
+      "name": "招牌番茄牛肉饭",
+      "fields": {
+        "shop_id": "shop-003",
+        "category": "快餐",
+        "cuisine": "杭帮菜",
+        "price_cents": 3800,
+        "tags": ["常点", "不辣", "稳定", "热天可接受"],
+        "delivery_minutes": 28,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-002",
+      "name": "老北京炸酱面 + 北冰洋",
+      "fields": {
+        "shop_id": "shop-017",
+        "category": "面食",
+        "cuisine": "北京菜",
+        "price_cents": 3200,
+        "tags": ["当地特色", "高性价比", "热天友好", "未尝试"],
+        "delivery_minutes": 24,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-003",
+      "name": "酸菜鱼单人套餐",
+      "fields": {
+        "shop_id": "shop-007",
+        "category": "快餐",
+        "cuisine": "酸菜鱼",
+        "price_cents": 4200,
+        "tags": ["常点近似", "开胃", "热天可接受"],
+        "delivery_minutes": 30,
+        "prepared_food_risk": "medium",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-004",
+      "name": "辣椒炒肉双拼饭",
+      "fields": {
+        "shop_id": "shop-024",
+        "category": "快餐",
+        "cuisine": "湘菜",
+        "price_cents": 4600,
+        "tags": ["常点", "偏辣", "昨日已点"],
+        "delivery_minutes": 31,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-005",
+      "name": "番茄锅底 + 牛肉拼盘",
+      "fields": {
+        "shop_id": "shop-001",
+        "category": "火锅",
+        "cuisine": "火锅",
+        "price_cents": 7800,
+        "tags": ["常点", "连锁", "热天不优先"],
+        "delivery_minutes": 42,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-006",
+      "name": "潮汕鲜牛肉火锅单人餐",
+      "fields": {
+        "shop_id": "shop-020",
+        "category": "火锅",
+        "cuisine": "潮汕火锅",
+        "price_cents": 8800,
+        "tags": ["品质优选", "高分", "未尝试"],
+        "delivery_minutes": 40,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-007",
+      "name": "京味爆三样盖饭",
+      "fields": {
+        "shop_id": "shop-027",
+        "category": "快餐",
+        "cuisine": "京味家常菜",
+        "price_cents": 3900,
+        "tags": ["当地特色", "高性价比", "未尝试"],
+        "delivery_minutes": 27,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-008",
+      "name": "手打虾滑酸汤鱼",
+      "fields": {
+        "shop_id": "shop-005",
+        "category": "烤鱼",
+        "cuisine": "烤鱼",
+        "price_cents": 6800,
+        "tags": ["品质优选", "开胃", "热天可接受"],
+        "delivery_minutes": 35,
+        "prepared_food_risk": "medium",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-009",
+      "name": "川香小炒套餐",
+      "fields": {
+        "shop_id": "shop-016",
+        "category": "快餐",
+        "cuisine": "川菜",
+        "price_cents": 5200,
+        "tags": ["连锁", "稳定", "微辣"],
+        "delivery_minutes": 29,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "order-001",
+      "name": "历史订单 001",
+      "fields": {
+        "type": "takeout_order",
+        "shop_id": "shop-024",
+        "dish_id": "dish-004",
+        "ordered_at": "2026-06-02T18:42:00+08:00",
+        "rating_by_user": 5
+      }
+    },
+    {
+      "id": "order-002",
+      "name": "历史订单 002",
+      "fields": {
+        "type": "takeout_order",
+        "shop_id": "shop-003",
+        "dish_id": "dish-001",
+        "ordered_at": "2026-05-29T12:08:00+08:00",
+        "rating_by_user": 5
+      }
+    },
+    {
+      "id": "order-003",
+      "name": "历史订单 003",
+      "fields": {
+        "type": "takeout_order",
+        "shop_id": "shop-007",
+        "dish_id": "dish-003",
+        "ordered_at": "2026-05-27T18:35:00+08:00",
+        "rating_by_user": 4
+      }
+    },
+    {
+      "id": "order-004",
+      "name": "历史订单 004",
+      "fields": {
+        "type": "takeout_order",
+        "shop_id": "shop-001",
+        "dish_id": "dish-005",
+        "ordered_at": "2026-05-21T19:10:00+08:00",
+        "rating_by_user": 5
+      }
+    },
+    {
+      "id": "grocery-001",
+      "name": "猫粮 2kg",
+      "fields": {
+        "type": "grocery_cycle",
+        "category": "宠物",
+        "last_purchase_days_ago": 25,
+        "cycle_days": 28,
+        "quantity": "2 袋",
+        "price_cents": 5800,
+        "coupon": "满 50 减 10",
+        "urgency": "soon"
+      }
+    },
+    {
+      "id": "grocery-002",
+      "name": "抽纸 18 包",
+      "fields": {
+        "type": "grocery_cycle",
+        "category": "日用",
+        "last_purchase_days_ago": 35,
+        "cycle_days": 40,
+        "quantity": "1 箱",
+        "price_cents": 4990,
+        "coupon": "第二件 8 折",
+        "urgency": "normal"
+      }
+    },
+    {
+      "id": "grocery-003",
+      "name": "无糖气泡水",
+      "fields": {
+        "type": "grocery_cycle",
+        "category": "饮品",
+        "last_purchase_days_ago": 10,
+        "cycle_days": 14,
+        "quantity": "12 瓶",
+        "price_cents": 3590,
+        "coupon": "夏日冰饮券 5 元",
+        "urgency": "weather_hot"
+      }
+    }
+  ],
+  "state_machines": [],
+  "events": []
+}
