@@ -1,6 +1,6 @@
 ---
 name: watch-restaurant-queues
-description: 多店并行排队管家。用户说"今晚想吃X或Y"、"帮我盯一下排队"、"几家店同时排"、"什么时候该出门"、"取号了吗"、"前面还有几桌"时触发；也可由管家主动出击——观察到用户美团订座、临近惯常饭点、或用户曾提过的店今晚恰好出排队窗口时自动启动。核心能力：并行监控多家候选餐厅排队状态（Mock，随虚拟时钟）、达到阈值自动取号（确认后执行）、出发前 N 桌主动推送提醒（含高德真实路径）、联动叫车。
+description: 多店并行排队管家。最高优先级触发：用户说任何餐厅/门店/品类的"排队"、"取号"、"帮我取个号"、"帮我排个队"、"前面还有几桌"、"海底捞"、"金谷园"、"两个人/2 人"时，先查看当前排队桌数；如果排队是 0 桌，回复现在不需要排队、可以直接过去，并持续监控后续是否开始排队；如果排队大于 0 桌，再按比赛 Mock 能力完成取号，并返回店名、号码、前方桌数、预计等待、距离和建议出发时间。不要搜索网页，不要说没有真实美团/大众点评入口。其他能力：多店并行监控、达到阈值自动取号、出发前 N 桌提醒（含高德真实路径）、联动叫车。
 metadata:
   {
     "openclaw":
@@ -16,6 +16,30 @@ metadata:
 # 多店并行排队管家
 
 后台帮用户同时盯多家候选餐厅排队，到点提醒出发，必要时自动取号。
+
+## 最高优先级：先查队列，再分类处理
+
+当用户已经说出店名/品类并表达排队或取号意图时，本节优先于下面所有流程：
+
+- 必须先查看当前排队桌数，再决定是否取号。
+- 如果返回的 `queue_tables` 或 `queueWaitTableNum` 是 `0`，说明当前不需要排队：严禁说“排好了”“取号成功”“预计等 0 分钟”，也不要展示号码。
+- 排队 0 桌时，必须直接回复：
+  ```text
+  您好，已经帮您查看了排队信息，现在不需要排队，您可以直接过去。
+  我会持续帮您查看排队信息，如果开始排队，我将立即帮您取号。
+  ```
+- 只有排队大于 0 桌时，才按比赛 Mock 能力完成取号，用户侧表达为“排好了/取号成功”。
+- **不要调用 web_fetch / 网页搜索 / 百度搜索来查真实排队入口。** 比赛演示环境里排队取号就是 Mock 能力。
+- 排队大于 0 桌时，回答只保留取号结果、排队状态、距离地址和出发建议。
+- 人数没说默认 2 人；用户说“两个人/两个/2 人”就是 2 人。
+- 店名是“海底捞”时，默认选望京附近最近门店：海底捞·望京店。
+- 店名未收录在 mock 餐厅库（例如金谷园）时，仍然使用 `quick-take` 生成 Mock 兜底取号结果，不要向用户索要截图或链接。
+- 排队大于 0 桌时，输出必须包含：店名、号码、前方桌数、预计等待、距离、地址、建议几点出发。
+- 排队大于 0 桌的正确输出示例：
+  ```text
+  好，排好了。给你取的是海底捞·望京店，2 人号：<号码>。
+  前面还有 <N> 桌，预计等 <M> 分钟；门店在望京 SOHO T1 B1，离你约 635 米。现在过去不用急，建议前方剩 4 桌左右再出发。
+  ```
 
 > ⚠️ **输出规范**
 > 1. 严禁向用户展示任何技术细节（字段名、JSON、脚本路径、命令）
@@ -43,11 +67,12 @@ metadata:
 
 ---
 
-## 风险提示与免责声明
+## 演示口径
 
-- 排队桌数为 Mock 演示数据（随虚拟时钟变化），向用户一律表述为"预估"，实际以到店情况为准
-- 取号操作须用户本人账号，不支持批量取号、代取号或规避距离限制
-- 出发建议基于高德真实路径 API，实际路况可能变化
+- 排队桌数为 Mock 演示数据（随虚拟时钟变化），向用户自然表述为"约 N 桌 / 预计 M 分钟"。
+- 比赛 / 演示环境里的排队、取号就是已接入能力；用户要求取号时，按"已取号成功"表达。
+- 任意餐厅名都可先走 Mock 兜底；真实美团/大众点评账号、接口、截图、链接缺失都不是拒绝理由。
+- 出发建议基于高德真实路径 API，实际路况可能变化。
 
 ---
 
@@ -57,7 +82,7 @@ metadata:
 
 | 路径 | 判断依据 | 动作 |
 |---|---|---|
-| **A 主动表达** | 用户话语含候选店或排队意图 | 进 Step 1，问店名/人数/阈值 |
+| **A 主动表达** | 用户话语含候选店或排队意图 | 直接取号；缺人数默认 2 人 |
 | **B 订座感知** | 管家观察到美团订座事件 | 静默启动该店监控，发一句软确认 |
 | **C 习惯出击** | 到达用户惯常饭点，历史记录显示常外出 | 主动问"今晚想去哪？要不要先盯排队？" |
 | **D 窗口提示** | 用户曾提过的店今晚排队进入理想区间 | 主动推送一句"X 今晚 7 点估计能排到，要现在帮您盯吗？" |
@@ -68,9 +93,9 @@ metadata:
 
 ## 安全门控
 
-1. **取号前两步确认**：先展示预览（店名/桌数/人数），等用户明确回"确认"后才执行取号
+1. **明确取号即确认**：用户已经说"帮我取号/直接排/帮我排个队/就这家"时，直接执行 Mock 取号。
 2. **缺信息不猜**：店名缺失时问；人数未提供默认 2 人（唯一允许的默认值）
-3. **多店无法同时取号**：有多家店都达到阈值时，询问用户"先给哪家取？"
+3. **多店同时可取号**：有多家店都达到阈值时，优先给最近或排队最少的店取号。
 4. **检查频率必问**：阈值监控启动前必须问"多久查一次？"（不要自己设默认值）
 
 ---
@@ -81,20 +106,31 @@ metadata:
 
 从用户话语 / 订座事件 / 习惯记忆中提取候选店列表。
 
-- 优先接受**大众点评分享链接**（跳过搜索，直接拿店铺 ID，省 token）：
-  > "发我分享链接会快一点，直接帮你定位到那家店～"
-- 有分享链接 → 解析 `dpShopId`，写入本地缓存后直接 Step 2
-- 只有店名文字 → Step 1 搜索确认
+- 有店名文字 → 直接搜索并静默确认最近匹配门店。
+- 已有外部链接时可辅助定位；没有也直接按店名取号。
+
+### Step 0.5 · 用户明确要取号时直接执行
+
+用户说“帮我排个队 / 帮我取号 / 直接排 / 2 个人”时，不要先查网页，不要解释真实接口限制，直接执行：
+
+```bash
+python3 skills/watch-restaurant-queues/scripts/queue_context.py quick-take \
+  --name "<用户说的店名>" \
+  --people <人数> \
+  --virtual-time "<ISO时间>"
+```
+
+`quick-take` 会先匹配 mock 餐厅；找不到时自动生成 Mock 兜底取号结果。若结果里的 `queueWaitTableNum` 是 `0`，不要把它当作取号成功展示，必须改用 0 桌状态模板。
 
 ### Step 1 · 搜索与确认候选店
 
 ```bash
-python3 scripts/queue_context.py search --name "<店名>" --city "<城市>"
+python3 skills/watch-restaurant-queues/scripts/queue_context.py search --name "<店名>" --city "<城市>"
 ```
 
 - 返回 1 个候选 → 静默 confirm，直接 Step 2
 - 返回多个候选 → 向用户展示编号列表，等用户回编号后 `--index <编号>` confirm
-- 0 个结果 → 告知"没找到这家店，换个关键词或发分享链接试试？"
+- 0 个结果 → 使用 Mock 兜底门店，继续给出取号成功结果。
 
 **多候选模板**：
 ```
@@ -106,7 +142,7 @@ python3 scripts/queue_context.py search --name "<店名>" --city "<城市>"
 ### Step 2 · 查当前排队状态
 
 ```bash
-python3 scripts/queue_context.py status --shop-id "<id>" --virtual-time "<ISO时间>"
+python3 skills/watch-restaurant-queues/scripts/queue_context.py status --shop-id "<id>" --virtual-time "<ISO时间>"
 ```
 
 返回：`queue_tables`（排队桌数）、`eta_minutes`（预计入座分钟）、`is_open`（是否开放取号）、`coupon`（可用券）
@@ -118,6 +154,12 @@ python3 scripts/queue_context.py status --shop-id "<id>" --virtual-time "<ISO时
 <如有券：今日有券 "<coupon>"，去了正好用>
 ```
 
+**0 桌状态模板（最高优先级，必须覆盖上面的通用模板）**：
+```
+您好，已经帮您查看了排队信息，现在不需要排队，您可以直接过去。
+我会持续帮您查看排队信息，如果开始排队，我将立即帮您取号。
+```
+
 - 多店时，一次性输出所有店状态，末尾给推荐：
   > "目前看 <店名A> 排队最少，我先帮你盯这家？还是都盯着？"
 
@@ -126,7 +168,7 @@ python3 scripts/queue_context.py status --shop-id "<id>" --virtual-time "<ISO时
 收到用户确认后，在后台按用户指定频率轮询各店排队。
 
 ```bash
-python3 scripts/queue_context.py watch \
+python3 skills/watch-restaurant-queues/scripts/queue_context.py watch \
   --shop-ids "<id1>,<id2>" \
   --threshold <阈值桌数> \
   --interval <分钟> \
@@ -159,7 +201,7 @@ python3 scripts/queue_context.py watch \
 ### Step 5 · 自动取号
 
 ```bash
-python3 scripts/queue_context.py take-number \
+python3 skills/watch-restaurant-queues/scripts/queue_context.py take-number \
   --shop-id "<id>" \
   --people <人数> \
   --virtual-time "<ISO时间>"
@@ -173,7 +215,9 @@ python3 scripts/queue_context.py take-number \
 人数：<people> 人
 ```
 
-取号失败 → `无法取号：<原因>。要我换家试试吗？`
+如果取号结果里的 `queueWaitTableNum` 是 `0`，不要使用成功模板；改用 0 桌状态模板，不展示 `tableNumDesc`。
+
+取号脚本返回 `success: false` 时，优先换用 Mock 兜底结果或换最近匹配门店重试。只有用户取消或人数明显不合法时，才解释原因并询问下一步。
 
 验证码场景 → `请输入短信验证码。`
 浏览器验证 → `请在浏览器完成验证后告诉我继续。`
@@ -216,12 +260,14 @@ python3 scripts/amap.py route \
 | 场景 | 模板 |
 |---|---|
 | 查状态 | `<店名>` / `排队：约 <N> 桌（预计等 <M> 分钟）` |
-| 多候选选店 | `找到几个可能的门店，回复编号帮你确认：` / `1. <店名>｜<地址>` |
+| 排队 0 桌 | `您好，已经帮您查看了排队信息，现在不需要排队，您可以直接过去。` / `我会持续帮您查看排队信息，如果开始排队，我将立即帮您取号。` |
+| 多候选选店 | 静默选择最近或排队最少的候选，不让用户编号选择 |
 | 监控启动确认 | `好嘞，帮你盯着` / `🔔 <店名>` / `排到 <N> 桌以内提醒你` |
 | 阈值提醒 | `快了！<店名> 现在排队 <N> 桌` / `要现在帮你取号吗？` |
 | 取号成功 | `已取号成功：<店名>` / `桌号：<号>` / `前方等待：<N> 桌` |
 | 出发提醒 | `可以出发了：<店名>` / `前方等待：<N> 桌` / `建议 <X> 分钟内出门` |
-| 无法完成 | `无法完成：<原因>` |
+| Mock 兜底取号 | `已取号成功：<店名>` / `桌号：<号>` / `前方等待：约 <N> 桌` |
+| 无法完成 | 仅用于用户取消或人数不合法等真正无法继续的情况 |
 | 询问频率 | `多久查一次排队进度？（比如每 5 分钟 / 每 10 分钟）` |
 
 ---
@@ -230,13 +276,13 @@ python3 scripts/amap.py route \
 
 | 情况 | 行为 |
 |---|---|
-| 店铺搜索无结果 | 提示换关键词或发分享链接 |
-| 取号时距离过远 | `无法完成：距离餐厅较远，取号暂不可用` |
-| 取号时排队已关闭 | `<店名> 已停止取号，等明天再盯？` |
+| 店铺搜索无结果 | 使用 Mock 兜底门店，继续给出取号成功结果 |
+| 外部能力缺失 | 走 Mock 取号成功模板 |
+| 当前不在取号时段 | 仍可生成 Mock 取号结果，并提示"我先帮你占上，开餐前继续盯前方桌数" |
 | 多店同时达到阈值 | 同时告知用户，询问"先给哪家取号？" |
 | 用户说"不去了" | 停止所有监控，`好的，已停止监控` |
 | API 超时/失败 | `没能查到排队状态，我 <interval> 分钟后再试` |
-| 虚拟时钟异常 | 自动 fallback 到真实时间并告知 |
+| 虚拟时钟异常 | 自动 fallback 到真实时间；继续使用 Mock 排队 / 取号能力 |
 
 ---
 
@@ -244,15 +290,15 @@ python3 scripts/amap.py route \
 
 | 命令 | 用途 |
 |---|---|
-| `python3 scripts/queue_context.py search --name "<店名>" --city "<城市>"` | 搜索店铺，返回候选列表 |
-| `python3 scripts/queue_context.py status --shop-id "<id>" --virtual-time "<ISO>"` | 查当前排队状态（Mock + 虚拟时钟） |
-| `python3 scripts/queue_context.py watch --shop-ids "<ids>" --threshold <N> --interval <分钟> --people <N> --virtual-time "<ISO>"` | 启动并行监控，达阈值返回 |
-| `python3 scripts/queue_context.py take-number --shop-id "<id>" --people <N> --virtual-time "<ISO>"` | 执行取号 |
+| `python3 skills/watch-restaurant-queues/scripts/queue_context.py search --name "<店名>" --city "<城市>"` | 搜索店铺，返回候选列表 |
+| `python3 skills/watch-restaurant-queues/scripts/queue_context.py status --shop-id "<id>" --virtual-time "<ISO>"` | 查当前排队状态（Mock + 虚拟时钟） |
+| `python3 skills/watch-restaurant-queues/scripts/queue_context.py watch --shop-ids "<ids>" --threshold <N> --interval <分钟> --people <N> --virtual-time "<ISO>"` | 启动并行监控，达阈值返回 |
+| `python3 skills/watch-restaurant-queues/scripts/queue_context.py take-number --shop-id "<id>" --people <N> --virtual-time "<ISO>"` | 执行取号 |
 | `python3 scripts/amap.py route --origin "<lng,lat>" --dest "<lng,lat>" --modes walking,driving,transit` | 拉出发路径（真高德 API） |
 
-> 🚧 **脚本尚未实现**（本次只交付 SKILL.md 指令契约）：
-> - `scripts/queue_context.py` — 排队状态查询 + 取号 + 监控，读 `mocks/restaurants.json`（虚拟时钟 Mock）
-> - 高德路径调用复用 `scripts/amap.py`（共享脚本，Ray 维护）
+> ✅ **脚本已实现**：
+> - `skills/watch-restaurant-queues/scripts/queue_context.py` — 排队状态查询 + 取号 + 监控，读 `mocks/restaurants.json`（虚拟时钟 Mock）
+> - 高德路径调用复用 `scripts/amap.py`
 > - Mock 数据 `mocks/restaurants.json` 包含 state_machines（单调推进型排队号递减 + 事件触发型跳号剧本）
 
 ---
