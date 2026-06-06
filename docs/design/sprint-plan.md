@@ -109,7 +109,7 @@
 - `skills/meal-grocery-assistant/SKILL.md`
 - `mocks/coupons.json`（券池 + 时段规则）
 - `mocks/user_orders_history.json`（用户历史外卖订单，喂偏好系统）
-- `~/.openclaw/agents/main/memory/preferences.md` / `habits.md` / `social.md`
+- `openclaw-workspace/USER.md`（稳定画像：忌口/预算/常驻地/同行人）+ `openclaw-workspace/MEMORY.md`（动态偏好沉淀），运行时同步到 `~/.openclaw/workspace/`
 - `docs/demo-script.md`
 - 管家人设定调文档
 
