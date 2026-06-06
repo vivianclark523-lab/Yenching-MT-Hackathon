@@ -21,7 +21,18 @@ import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+def _find_shared_root(start: Path) -> Path:
+    """从 start 向上找含共享 mocks/ 包的目录，作为依赖根。
+    - dev 仓库里运行 → 找到仓库根（mocks/ 是 skills/ 的兄弟目录）
+    - 部署成自包含 skill 包后运行 → 找到包根（{baseDir}，mocks/ 已 vendor 进来）
+    同一份代码在两处都跑，替掉脆的 parents[N]（部署后层级会变）。详见 docs。"""
+    for d in (start, *start.parents):
+        if (d / "mocks" / "clock.py").is_file():
+            return d
+    return start.parents[0]
+
+
+REPO_ROOT = _find_shared_root(Path(__file__).resolve().parent)
 MOCKS_DIR = REPO_ROOT / "mocks"
 TZ_BEIJING = timezone(timedelta(hours=8))
 

@@ -1,6 +1,6 @@
 ---
 name: route-planning-sharing
-description: 面向中文用户的本地生活出行助手，人设是"懂你的闺蜜"。覆盖从单点到成局的出行需求：查一家店/算一段路、按品类推荐几家店（带评分+特点+位置）、规划多节点出行（吃饭+看展+看电影+逛街），以及出行结束后由「虾蜜」用闺蜜口吻写一段可发群/朋友圈的出行总结、并把足迹沉淀成可回看的私人档案与年度报告。触发意图：周末出去玩、约朋友吃饭看电影、去哪玩好、想吃某品类推荐几家、帮我看看这家店/怎么去、帮我做攻略/行程、群聊讨论出去玩、日历到点的约会还没安排怎么去、出游小结、朋友圈卡片、今日打卡总结。所有距离/时长/评分/人均/打车费来自高德真 API，可现场比对验证。
+description: 【硬规则：店名/评分/人均/距离/路线/排队一律先运行本 skill 的脚本（高德真 API + 业务 Mock）取得，严禁凭模型记忆编造；命中意图先读本 skill 的 SKILL.md 再跑脚本作答】面向中文用户的本地生活出行助手，人设是"懂你的闺蜜"。覆盖从单点到成局的出行需求：查一家店/算一段路、按品类推荐几家店（带评分+特点+位置）、规划多节点出行（吃饭+看展+看电影+逛街），以及出行结束后由「虾蜜」用闺蜜口吻写一段可发群/朋友圈的出行总结、并把足迹沉淀成可回看的私人档案与年度报告。触发意图：周末出去玩、约朋友吃饭看电影、去哪玩好、想吃某品类推荐几家、帮我看看这家店/怎么去、帮我做攻略/行程、群聊讨论出去玩、日历到点的约会还没安排怎么去、出游小结、朋友圈卡片、今日打卡总结。所有距离/时长/评分/人均/打车费来自高德真 API，可现场比对验证。
 metadata:
   {
     "openclaw":
@@ -14,6 +14,8 @@ metadata:
 ---
 
 # 智能路线规划与分享
+
+> ⛔ **最高优先 · 先跑脚本再开口**：你**没有**北京本地餐厅/影院的内置知识。任何具体**店名 / 评分 / 人均 / 距离 / 路线 / 排队**，都**必须先运行本 skill 的脚本**（`{baseDir}/scripts/amap.py` 等，见下「工作流程」「命令清单」）拿到返回值，再据此作答。**没跑脚本前，绝不许列出任何具体店名或数字**——宁可先问一句位置/口味，也不要凭记忆编造（评委会用高德 APP 现场比对，编造即穿帮）。
 
 本地生活出行助手。覆盖**两大阶段**，工作流程完全不同，分开看：
 
@@ -75,19 +77,19 @@ metadata:
    > 记忆是全项目共享的原生 OpenClaw 记忆(USER.md/MEMORY.md，与 Skill 2 同源)，不是 Skill 3 私有文件。详见 docs/design/memory-architecture-alignment.md。
 2. **拉候选 POI**（中/重粒度）— 高德真 API：
    ```bash
-   python3 scripts/amap.py search --keyword "<品类/主题>" --location "<lng,lat>" --radius 2000
+   python3 {baseDir}/scripts/amap.py search --keyword "<品类/主题>" --location "<lng,lat>" --radius 2000
    ```
    返回每家：`name`/`rating`(点评评分)/`cost`(**人均消费金额**)/`opentime_today`/`tag`(招牌菜/特色)/`business_area`/`tel`/`location`/`photos`。
    > 用户没给位置时，demo 默认用户位置固定在 **望京（美团总部附近）**（POI 丰富、可复现），可通过参数切换区域。
 3. **算路径**（用户关心怎么去 / 多节点衔接 / 单点"算一段路"时）— 高德真 API：
    ```bash
-   python3 scripts/amap.py route --origin "<lng,lat>" --dest "<lng,lat>" --modes walking,driving,transit
+   python3 {baseDir}/scripts/amap.py route --origin "<lng,lat>" --dest "<lng,lat>" --modes walking,driving,transit
    ```
    返回每种方式：`distance`/`duration`/`taxi_cost`/`tmc_status`(实时路况)。
 4. **拉天气**（天气影响推荐时，如户外/雨天）：`curl -s "https://wttr.in/<城市>?format=j1"` 或复用内置 `weather` skill。
 5. **叠加业务层**（涉及排队/券/票务时）— Mock，随虚拟时钟：
    ```bash
-   python3 skills/route-planning-sharing/scripts/business_context.py --poi "<poi_id 或店名>"
+   python3 {baseDir}/scripts/business_context.py --poi "<poi_id 或店名>"
    ```
    返回（**可能为空——不是每家都有业务层数据**）：
    - `queue_tables`：当前排队桌数（随虚拟时钟变化）
@@ -125,7 +127,7 @@ metadata:
 1. **每类停留点各自搜索 + 打分 + 剪枝**：对每一类（餐厅/影院/公园…）跑 `amap.py search`，用上方「100 分表」给候选打分，**每类只留 top 2-3**（先剪枝再算路，省调用、提速）。
 2. **交给 planner 算路线**：
    ```bash
-   python3 scripts/route_planner.py --origin "<lng,lat>" --depart "<出发时间>" \
+   python3 {baseDir}/scripts/route_planner.py --origin "<lng,lat>" --depart "<出发时间>" \
      --stops '<剪枝后候选 JSON：每类含 name/location/score/opentime/dwell_minutes/queue_eta>' \
      --anchors '<时间锚点 JSON，如电影场次 21:30>'
    ```
@@ -255,12 +257,12 @@ metadata:
 
 1. **写入**（出行闭环后）：
    ```bash
-   python3 skills/route-planning-sharing/scripts/footprint_log.py --spec '<足迹 JSON>'
+   python3 {baseDir}/scripts/footprint_log.py --spec '<足迹 JSON>'
    ```
    按 `footprint/v1` schema 落进 OpenClaw 记忆（`memory/YYYY-MM-DD.md`）。schema 见脚本头。
 2. **年度报告**（用户问"今年都去哪了"/年中年末）：
    ```bash
-   python3 skills/route-planning-sharing/scripts/footprint_wrapped.py --year <年>
+   python3 {baseDir}/scripts/footprint_wrapped.py --year <年>
    ```
    确定性聚合（出行数/最常吃/总花费/最长排队/踩雷数/里程/最常和谁）→ 统计交给虾蜜 narrate。**数数交给脚本，叙述交给虾蜜**，不依赖 embedding。
 3. demo 累积靠预埋：`seed_footprints.py` 灌一批历史 Mock（**明确标 mock**）。
@@ -308,24 +310,26 @@ A 是纯文字、**零失败面**(不调任何生图)。即梦文生图(`imagege
 
 # 命令清单
 
+> 💡 命令里的 `{baseDir}` = 本 skill 的安装目录（OpenClaw 自动注入其绝对路径；部署后所有脚本与 `mocks/` 都在 `{baseDir}` 下，自包含）。直接照用，不要替换成仓库相对路径。
+
 | 命令 | 用途 |
 |---|---|
-| `python3 scripts/amap.py geocode --address "<地址>"` | 地址 → 坐标 |
-| `python3 scripts/amap.py search --keyword "<品类>" --location "<lng,lat>" --radius <米>` | 周边 POI 搜索 |
-| `python3 scripts/amap.py route --origin "<lng,lat>" --dest "<lng,lat>" --modes walking,driving,transit` | 多方式路径规划 |
-| `python3 skills/route-planning-sharing/scripts/business_context.py --poi "<poi_id 或店名>"` | 业务层 Mock（排队/券/票务，随虚拟时钟） |
-| `python3 scripts/route_planner.py --origin "<lng,lat>" --depart "<时间>" --stops '<JSON>' --anchors '<JSON>'` | 多节点路线规划：枚举+剪枝+时间可行性+4套路，返回 3-4 条路线 |
+| `python3 {baseDir}/scripts/amap.py geocode --address "<地址>"` | 地址 → 坐标 |
+| `python3 {baseDir}/scripts/amap.py search --keyword "<品类>" --location "<lng,lat>" --radius <米>` | 周边 POI 搜索 |
+| `python3 {baseDir}/scripts/amap.py route --origin "<lng,lat>" --dest "<lng,lat>" --modes walking,driving,transit` | 多方式路径规划 |
+| `python3 {baseDir}/scripts/business_context.py --poi "<poi_id 或店名>"` | 业务层 Mock（排队/券/票务，随虚拟时钟） |
+| `python3 {baseDir}/scripts/route_planner.py --origin "<lng,lat>" --depart "<时间>" --stops '<JSON>' --anchors '<JSON>'` | 多节点路线规划：枚举+剪枝+时间可行性+4套路，返回 3-4 条路线 |
 | `curl -s "https://wttr.in/<城市>?format=j1"` | 当日天气 |
-| `python3 skills/route-planning-sharing/scripts/footprint_log.py --spec '<JSON>'` | 出行结束记一条结构化足迹（写入 OpenClaw 记忆） |
-| `python3 skills/route-planning-sharing/scripts/footprint_wrapped.py --year <年>` | 聚合足迹出年度报告统计（交给虾蜜叙述） |
-| `scripts/imagegen.py`（即梦文生图，**独立分支·暂未并入主线**） | 可选配图增强,非主线,如需再引 |
+| `python3 {baseDir}/scripts/footprint_log.py --spec '<JSON>'` | 出行结束记一条结构化足迹（写入 OpenClaw 记忆） |
+| `python3 {baseDir}/scripts/footprint_wrapped.py --year <年>` | 聚合足迹出年度报告统计（交给虾蜜叙述） |
+| imagegen（即梦文生图，**独立分支·暂未并入主线**） | 可选配图增强,非主线,如需再引 |
 
-> ✅ **脚本均已实现**：
-> - `scripts/amap.py` — 高德地理（geocode/search/route），**真 key / Mock fixture 双模式**，没 key 也能跑 demo
-> - `scripts/route_planner.py` — 多节点路线 planner（枚举/剪枝/时间可行性/4套路），已实跑验证
-> - `skills/route-planning-sharing/scripts/business_context.py` — 业务层 Mock（排队/券/票务），与 Skill 1 同源（`mocks/restaurants|coupons|user_orders.json` + `state_machine.py` + `clock.py`，见 docs/design/shared-infra-alignment.md）
-> - `skills/route-planning-sharing/scripts/footprint_log.py` / `footprint_wrapped.py` / `seed_footprints.py` — 足迹写入 / 年度报告聚合 / 历史预埋（方向 B）
-> - `scripts/imagegen.py` — 即梦 4.6 文生图（读 `JIMENG_*`），写于独立分支 `feat/skill3-imagegen`，**降级为可选、暂不并入主线**
+> ✅ **脚本均已实现**（仓库源在 `scripts/` + `skills/route-planning-sharing/scripts/` + `mocks/`；`deploy.py` 部署时把共享 `scripts/`+`mocks/` 一并 vendor 进 `{baseDir}` 下，运行时全部自包含）：
+> - `amap.py` — 高德地理（geocode/search/route），**真 key / Mock fixture 双模式**，没 key 也能跑 demo
+> - `route_planner.py` — 多节点路线 planner（枚举/剪枝/时间可行性/4套路），已实跑验证
+> - `business_context.py` — 业务层 Mock（排队/券/票务），与 Skill 1 同源（`mocks/restaurants|coupons|user_orders.json` + `state_machine.py` + `clock.py`，见 docs/design/shared-infra-alignment.md）；依赖定位用「向上找 `mocks/`」，dev 与部署包两处都跑
+> - `footprint_log.py` / `footprint_wrapped.py` / `seed_footprints.py` — 足迹写入 / 年度报告聚合 / 历史预埋（方向 B），写 `~/.openclaw/workspace/memory/`（OpenClaw 自动索引）
+> - imagegen（即梦 4.6 文生图，读 `JIMENG_*`）— 写于独立分支 `feat/skill3-imagegen`，**降级为可选、暂不并入主线**
 
 ---
 
