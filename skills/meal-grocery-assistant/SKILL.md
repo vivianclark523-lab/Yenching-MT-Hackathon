@@ -48,7 +48,7 @@ metadata:
 
 - 外卖和采购数据为 Mock 演示数据，向用户表达为"预计"或"可选方案"
 - 不自动支付、不自动提交真实订单；下单前必须二次确认
-- 用户忌口、预算、地址以当前对话显式输入优先；记忆和 Mock 画像只是默认值
+- 用户忌口、预算、地址以当前对话显式输入优先；`USER.md` / `MEMORY.md` 原生画像和 Mock 外卖数据只是默认值
 - 天气、日程、昨日订单用于避坑，不作为强制医疗或健康建议
 
 ---
@@ -114,7 +114,7 @@ metadata:
 - 用户明确品类、预算、忌口、是否旅游、天气、日程
 - 是否要求立即下单
 
-先调用画像命令拿默认偏好：
+先使用已注入的 `USER.md` / `MEMORY.md` 画像作为默认偏好；再调用 Mock 命令补充 Skill 2 专用的历史订单、复购和采购周期数据：
 
 ```bash
 python3 skills/meal-grocery-assistant/scripts/meal_context.py profile
@@ -309,7 +309,7 @@ python3 skills/meal-grocery-assistant/scripts/meal_context.py grocery --need aut
 
 | 命令 | 用途 |
 |---|---|
-| `python3 skills/meal-grocery-assistant/scripts/meal_context.py profile` | 汇总用户外卖画像 |
+| `python3 skills/meal-grocery-assistant/scripts/meal_context.py profile` | 汇总 Skill 2 Mock 外卖画像与历史数据 |
 | `python3 skills/meal-grocery-assistant/scripts/meal_context.py recommend --scenario busy` | 极忙场景 top 1 |
 | `python3 skills/meal-grocery-assistant/scripts/meal_context.py recommend --scenario inspiration` | 纠结场景 4 张卡 |
 | `python3 skills/meal-grocery-assistant/scripts/meal_context.py recommend --scenario category --category "<品类>"` | 明确品类常用 + 探索 |
