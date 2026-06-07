@@ -622,7 +622,8 @@ def cmd_deal(args: argparse.Namespace) -> None:
     meal_ctx = MealContext()
     shop_names = meal_ctx.restaurant_by_id
     is_member = bool(meal_ctx.profile.get("is_member", False)) if args.member is None else args.member
-    context = {"is_member": is_member, "is_new_customer": False}
+    ordered_shops = {o["fields"]["shop_id"] for o in meal_ctx.orders}  # 用户有历史的店 → 新客券判定
+    context = {"is_member": is_member, "ordered_shops": ordered_shops}
 
     candidates = _deal_candidates(args.want, now, context, coupons, catalog)
     if not candidates:
@@ -721,7 +722,8 @@ def cmd_scan(args: argparse.Namespace) -> None:
     meal_ctx = MealContext()
     shop_names = meal_ctx.restaurant_by_id
     is_member = bool(meal_ctx.profile.get("is_member", False)) if args.member is None else args.member
-    context = {"is_member": is_member, "is_new_customer": False}
+    ordered_shops = {o["fields"]["shop_id"] for o in meal_ctx.orders}  # 用户有历史的店 → 新客券判定
+    context = {"is_member": is_member, "ordered_shops": ordered_shops}
 
     pushes = []
     for c in ce.expiring_coupons(now, within_minutes=args.within_minutes, coupons=coupons):

@@ -404,6 +404,35 @@
       }
     },
     {
+      "id": "dish-033",
+      "name": "呷哺·单人麻辣小火锅",
+      "fields": {
+        "shop_id": "shop-008",
+        "category": "火锅",
+        "cuisine": "火锅",
+        "price_cents": 3500,
+        "tags": ["单人", "连锁", "快出餐"],
+        "delivery_minutes": 30,
+        "prepared_food_risk": "low",
+        "is_signature": false
+      }
+    },
+    { "id": "dish-034", "name": "仝小闹麻辣烫(自选)", "fields": { "shop_id": "shop-025", "category": "麻辣烫", "cuisine": "麻辣烫", "price_cents": 3200, "tags": ["核心品类", "自选"], "delivery_minutes": 28, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-035", "name": "杨国福招牌麻辣烫", "fields": { "shop_id": "shop-032", "category": "麻辣烫", "cuisine": "麻辣烫", "price_cents": 3600, "tags": ["核心品类", "招牌"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-036", "name": "杨国福麻辣拌套餐", "fields": { "shop_id": "shop-032", "category": "麻辣烫", "cuisine": "麻辣烫", "price_cents": 4000, "tags": ["核心品类", "套餐"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": false } },
+    { "id": "dish-037", "name": "张亮麻辣烫", "fields": { "shop_id": "shop-033", "category": "麻辣烫", "cuisine": "麻辣烫", "price_cents": 2600, "tags": ["核心品类", "低价"], "delivery_minutes": 32, "prepared_food_risk": "medium", "is_signature": false } },
+    { "id": "dish-038", "name": "和府招牌牛肉面", "fields": { "shop_id": "shop-034", "category": "面食", "cuisine": "面食", "price_cents": 4200, "tags": ["核心品类", "招牌"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-039", "name": "和府牛肉面双拼套餐", "fields": { "shop_id": "shop-034", "category": "面食", "cuisine": "面食", "price_cents": 4800, "tags": ["核心品类", "套餐"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-040", "name": "味千豚骨拉面", "fields": { "shop_id": "shop-035", "category": "面食", "cuisine": "面食", "price_cents": 3800, "tags": ["核心品类", "连锁"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-041", "name": "农家小炒肉盖饭", "fields": { "shop_id": "shop-036", "category": "家常小炒", "cuisine": "家常小炒", "price_cents": 3600, "tags": ["核心品类", "招牌"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-042", "name": "小炒肉套餐(含例汤)", "fields": { "shop_id": "shop-036", "category": "家常小炒", "cuisine": "家常小炒", "price_cents": 4200, "tags": ["核心品类", "套餐"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-043", "name": "鱼香肉丝盖饭", "fields": { "shop_id": "shop-037", "category": "家常小炒", "cuisine": "家常小炒", "price_cents": 3000, "tags": ["核心品类"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": false } },
+    { "id": "dish-044", "name": "家常炒时蔬盖饭", "fields": { "shop_id": "shop-038", "category": "家常小炒", "cuisine": "家常小炒", "price_cents": 2400, "tags": ["核心品类", "低价"], "delivery_minutes": 32, "prepared_food_risk": "medium", "is_signature": false } },
+    { "id": "dish-045", "name": "牛油果鸡胸沙拉", "fields": { "shop_id": "shop-039", "category": "轻食", "cuisine": "轻食", "price_cents": 4500, "tags": ["核心品类", "品质优选", "健康"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-046", "name": "藜麦鸡胸温沙拉热碗", "fields": { "shop_id": "shop-039", "category": "轻食", "cuisine": "轻食", "price_cents": 4200, "tags": ["核心品类", "热食", "健康"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-047", "name": "wagas 招牌谷物沙拉碗", "fields": { "shop_id": "shop-040", "category": "轻食", "cuisine": "轻食", "price_cents": 4000, "tags": ["核心品类", "品质优选"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
+    { "id": "dish-048", "name": "基础鸡胸沙拉", "fields": { "shop_id": "shop-041", "category": "轻食", "cuisine": "轻食", "price_cents": 2200, "tags": ["核心品类", "低价", "预制感"], "delivery_minutes": 32, "prepared_food_risk": "high", "is_signature": false } },
+    {
       "id": "order-001",
       "name": "历史订单 001",
       "fields": {

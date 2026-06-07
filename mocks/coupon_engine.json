@@ -289,7 +289,136 @@
         "held_by_user": true,
         "expires_at": "2026-06-08T00:00:00+08:00"
       }
-    }
+    },
+    {
+      "id": "ce-031",
+      "name": "奥琦玛满80减20",
+      "fields": {
+        "description": "奥琦玛牛肉火锅·满 80 减 20",
+        "type": "shop_full_reduce",
+        "layer": 1,
+        "shop_id": "shop-020",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 8000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 2000, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-020",
+        "stackable_with": ["item", "platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-032",
+      "name": "奥琦玛鲜牛肉立减8",
+      "fields": {
+        "description": "奥琦玛·潮汕鲜牛肉单品立减 8 元",
+        "type": "sku_coupon",
+        "layer": 0,
+        "shop_id": "shop-020",
+        "scope": { "kind": "sku", "ref": "dish-006" },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 800, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 10,
+        "exclusive_group": "item@shop-020",
+        "stackable_with": ["shop", "platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-033",
+      "name": "呷哺新店9折",
+      "fields": {
+        "description": "呷哺呷哺·新店 9 折最高减 6",
+        "type": "shop_discount",
+        "layer": 1,
+        "shop_id": "shop-008",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 9000, "cap_cents": 600, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-008",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-034",
+      "name": "太二满40减8",
+      "fields": {
+        "description": "太二酸菜鱼·满 40 减 8",
+        "type": "shop_full_reduce",
+        "layer": 1,
+        "shop_id": "shop-007",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 4000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 800, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-007",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-035",
+      "name": "费大厨88折",
+      "fields": {
+        "description": "费大厨辣椒炒肉·88 折最高减 12",
+        "type": "shop_discount",
+        "layer": 1,
+        "shop_id": "shop-024",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 8800, "cap_cents": 1200, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-024",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-036",
+      "name": "眉州满50减10",
+      "fields": {
+        "description": "眉州东坡·满 50 减 10",
+        "type": "shop_full_reduce",
+        "layer": 1,
+        "shop_id": "shop-016",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 5000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 1000, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-016",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    { "id": "ce-037", "name": "仝小闹满30减5", "fields": { "description": "仝小闹麻辣烫·满 30 减 5", "type": "shop_full_reduce", "layer": 1, "shop_id": "shop-025", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "order_subtotal", "min_amount_cents": 3000, "min_count": null }, "discount": { "mode": "amount", "amount_cents": 500, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-025", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-038", "name": "杨国福新客立减8", "fields": { "description": "杨国福麻辣烫·新客无门槛立减 8 元", "type": "shop_full_reduce", "layer": 1, "shop_id": "shop-032", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "amount", "amount_cents": 800, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-032", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": true, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-039", "name": "张亮9折", "fields": { "description": "张亮麻辣烫·9 折最高减 5", "type": "shop_discount", "layer": 1, "shop_id": "shop-033", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 9000, "cap_cents": 500, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-033", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-040", "name": "老北京满30减4", "fields": { "description": "老北京炸酱面·满 30 减 4", "type": "shop_full_reduce", "layer": 1, "shop_id": "shop-017", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "order_subtotal", "min_amount_cents": 3000, "min_count": null }, "discount": { "mode": "amount", "amount_cents": 400, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-017", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-041", "name": "和府满40减8", "fields": { "description": "和府捞面·满 40 减 8", "type": "shop_full_reduce", "layer": 1, "shop_id": "shop-034", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "order_subtotal", "min_amount_cents": 4000, "min_count": null }, "discount": { "mode": "amount", "amount_cents": 800, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-034", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-042", "name": "和府新客9折", "fields": { "description": "和府捞面·新客 9 折最高减 10", "type": "shop_discount", "layer": 1, "shop_id": "shop-034", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 9000, "cap_cents": 1000, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-034", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": true, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-043", "name": "味千88折", "fields": { "description": "味千拉面·88 折最高减 10", "type": "shop_discount", "layer": 1, "shop_id": "shop-035", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 8800, "cap_cents": 1000, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-035", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-044", "name": "湘当有味满35减6", "fields": { "description": "湘当有味·满 35 减 6", "type": "shop_full_reduce", "layer": 1, "shop_id": "shop-036", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "order_subtotal", "min_amount_cents": 3500, "min_count": null }, "discount": { "mode": "amount", "amount_cents": 600, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-036", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-045", "name": "湘当有味新客立减8", "fields": { "description": "湘当有味·新客无门槛立减 8 元", "type": "shop_full_reduce", "layer": 1, "shop_id": "shop-036", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "amount", "amount_cents": 800, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-036", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": true, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-046", "name": "川味小炒88折", "fields": { "description": "川味小炒·88 折最高减 8", "type": "shop_discount", "layer": 1, "shop_id": "shop-037", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 8800, "cap_cents": 800, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-037", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-047", "name": "妈妈味9折", "fields": { "description": "妈妈味家常小炒·9 折最高减 4", "type": "shop_discount", "layer": 1, "shop_id": "shop-038", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 9000, "cap_cents": 400, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-038", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-048", "name": "gaga满40减6", "fields": { "description": "gaga 鲜语·满 40 减 6", "type": "shop_full_reduce", "layer": 1, "shop_id": "shop-039", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "order_subtotal", "min_amount_cents": 4000, "min_count": null }, "discount": { "mode": "amount", "amount_cents": 600, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-039", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-049", "name": "wagas88折", "fields": { "description": "wagas·88 折最高减 10", "type": "shop_discount", "layer": 1, "shop_id": "shop-040", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 8800, "cap_cents": 1000, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-040", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-050", "name": "wagas新客9折", "fields": { "description": "wagas·新客 9 折最高减 10", "type": "shop_discount", "layer": 1, "shop_id": "shop-040", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 9000, "cap_cents": 1000, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-040", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": true, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } },
+    { "id": "ce-051", "name": "沙拉日记9折", "fields": { "description": "沙拉日记·9 折最高减 4", "type": "shop_discount", "layer": 1, "shop_id": "shop-041", "scope": { "kind": "all", "ref": null }, "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null }, "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 9000, "cap_cents": 400, "fixed_price_cents": null }, "application_order": 20, "exclusive_group": "shop@shop-041", "stackable_with": ["platform", "member", "delivery"], "conditions": { "new_customer": false, "member_only": false, "weekday_in": null }, "validity_ref": null, "stock_ref": null } }
   ],
   "state_machines": [
     {
