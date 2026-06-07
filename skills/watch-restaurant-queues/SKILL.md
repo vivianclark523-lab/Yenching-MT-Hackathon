@@ -55,6 +55,8 @@ metadata:
 
 - 用户主动表达："今晚吃 X 或 Y"、"帮我盯一下排队"、"什么时候该出门"、"取号了吗"、"前面还有几桌"
 - 用户给出多家候选餐厅，需要并行监控哪家先有位
+- 用户说想吃某类食物（如"我想吃火锅"） → 自动排所有该类餐厅
+- 用户提到在某个商场/地点 → 自动排该地点的热门餐厅
 - 管家观察到用户在美团 APP 订座 → 自动启动该店监控（路径 B）
 - 临近用户惯常饭点（如每周五 17:00 用户都外出） → 主动出击（路径 C）
 - 用户曾提过的店今晚正常出排队窗口 → 主动推送（路径 D）
@@ -122,21 +124,42 @@ python3 skills/watch-restaurant-queues/scripts/queue_context.py quick-take \
 
 `quick-take` 会先匹配 mock 餐厅；找不到时自动生成 Mock 兜底取号结果。若结果里的 `queueWaitTableNum` 是 `0`，不要把它当作取号成功展示，必须改用 0 桌状态模板。
 
-### Step 1 · 搜索与确认候选店
+### Step 1 · 搜索与确认候选店（或自动识别）
 
+**情况 A：用户指定具体店名**
 ```bash
-python3 skills/watch-restaurant-queues/scripts/queue_context.py search --name "<店名>" --city "<城市>"
+python3 scripts/queue_context.py search --name "<店名>" --city "<城市>"
 ```
 
 - 返回 1 个候选 → 静默 confirm，直接 Step 2
 - 返回多个候选 → 向用户展示编号列表，等用户回编号后 `--index <编号>` confirm
-- 0 个结果 → 使用 Mock 兜底门店，继续给出取号成功结果。
+- 0 个结果 → 告知"没找到这家店，换个关键词或发分享链接试试？"
 
 **多候选模板**：
 ```
 找到几个可能的门店，回复编号帮你确认：
 1. <店名> ｜ <地址>
 2. <店名> ｜ <地址>
+```
+
+---
+
+**情况 B：用户说想吃某类食物或在某个商场（自动全排）**
+
+当用户表达"想吃火锅"、"在某某商场吃"等情况时，自动执行：
+
+1. 搜索所有该类餐厅/该地点的餐厅
+2. **自动全部排上**，无需用户选择
+3. 告诉用户："好嘞！我已经把 <X> 家餐厅都排上了，哪个最快就去哪个。"
+
+**自动全排模板**：
+```
+好嘞！我已经把 <X> 家符合要求的餐厅都排上了：
+<店名1>
+<店名2>
+<店名3>
+...
+哪个最快能排到我就提醒你哈～
 ```
 
 ### Step 2 · 查当前排队状态
@@ -259,12 +282,16 @@ python3 scripts/amap.py route \
 
 | 场景 | 模板 |
 |---|---|
-| 查状态 | `<店名>` / `排队：约 <N> 桌（预计等 <M> 分钟）` |
-| 排队 0 桌 | `您好，已经帮您查看了排队信息，现在不需要排队，您可以直接过去。` / `我会持续帮您查看排队信息，如果开始排队，我将立即帮您取号。` |
+| 查状态（排队中） | `<店名>` / `排队：约 <N> 桌（预计等 <M> 分钟）` / `或者您比较偏好几点去？我会卡着您去的这个时间去给您操作。` |
+| 查状态（未开始） | `<店名>` / `现在还没开始排队，我会帮你盯着。` / `我会持续帮您查看排队信息，如果开始排队，我将立即帮您取号。` / `或者您比较偏好几点去？我会卡着您去的这个时间去给您操作。` |
 | 多候选选店 | 静默选择最近或排队最少的候选，不让用户编号选择 |
 | 监控启动确认 | `好嘞，帮你盯着` / `🔔 <店名>` / `排到 <N> 桌以内提醒你` |
+| **自动全排** | `好嘞！我已经把 <X> 家符合要求的餐厅都排上了：` / `<店名1>` / `<店名2>` / `...` / `哪个最快能排到我就提醒你哈～` / `或者您比较偏好几点去？我会卡着您去的这个时间去给您操作。` |
 | 阈值提醒 | `快了！<店名> 现在排队 <N> 桌` / `要现在帮你取号吗？` |
+| 首次排队自动取号 | `<店名> 开始排队了！` / `已帮你自动取号：` / `桌号：<号>` / `你计划几点去吃？` |
+| **最先排到通知** | `🎉 <店名> 最先排到了！` / `桌号：<号>` / `前方等待：<N> 桌` / `预计等 <M> 分钟` / `现在可以准备过去啦！` |
 | 取号成功 | `已取号成功：<店名>` / `桌号：<号>` / `前方等待：<N> 桌` |
+| 时间规划回复 | `好的，我会按照这个预计时间操作，保证你 <计划时间> 左右能吃上。` |
 | 出发提醒 | `可以出发了：<店名>` / `前方等待：<N> 桌` / `建议 <X> 分钟内出门` |
 | Mock 兜底取号 | `已取号成功：<店名>` / `桌号：<号>` / `前方等待：约 <N> 桌` |
 | 无法完成 | 仅用于用户取消或人数不合法等真正无法继续的情况 |
@@ -290,10 +317,11 @@ python3 scripts/amap.py route \
 
 | 命令 | 用途 |
 |---|---|
-| `python3 skills/watch-restaurant-queues/scripts/queue_context.py search --name "<店名>" --city "<城市>"` | 搜索店铺，返回候选列表 |
+| `python3 skills/watch-restaurant-queues/scripts/queue_context.py search --name "<店名/品类>" --city "<城市>" [--cuisine]` | 搜索店铺（支持按品类搜索） |
 | `python3 skills/watch-restaurant-queues/scripts/queue_context.py status --shop-id "<id>" --virtual-time "<ISO>"` | 查当前排队状态（Mock + 虚拟时钟） |
 | `python3 skills/watch-restaurant-queues/scripts/queue_context.py watch --shop-ids "<ids>" --threshold <N> --interval <分钟> --people <N> --virtual-time "<ISO>"` | 启动并行监控，达阈值返回 |
 | `python3 skills/watch-restaurant-queues/scripts/queue_context.py take-number --shop-id "<id>" --people <N> --virtual-time "<ISO>"` | 执行取号 |
+| `python3 skills/watch-restaurant-queues/scripts/queue_context.py auto-queue --keyword "<品类/商圈>" --city "<城市>" --cuisine --people <N> --virtual-time "<ISO>"` | **自动全排所有符合要求的餐厅**，找出最快的 |
 | `python3 scripts/amap.py route --origin "<lng,lat>" --dest "<lng,lat>" --modes walking,driving,transit` | 拉出发路径（真高德 API） |
 
 > ✅ **脚本已实现**：
