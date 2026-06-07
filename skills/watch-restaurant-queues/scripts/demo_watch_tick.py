@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -55,7 +56,11 @@ from mocks.clock import virtual_now  # noqa: E402
 import queue_context as qc  # noqa: E402
 
 # ---------- 配置 ----------
-FEISHU_GROUP = "oc_94e5cb492a80d1417266e769fbe2a19b"  # 虾蜜闺蜜组
+# 飞书目标群 chat_id 从环境变量注入，不硬编码到代码里——既避免把内部群标识提交进仓库，
+# 又便于切换录制群（demo 群常变）。设置方式二选一：
+#   · 给 watch-restaurant-queues 的 skill env 加 FEISHU_GROUP_CHAT_ID（openclaw 配置）
+#   · 运行时 `--target oc_xxx` 覆盖（cron 的命令里直接带上）
+FEISHU_GROUP = os.environ.get("FEISHU_GROUP_CHAT_ID", "").strip() or None
 LEDGER = Path.home() / ".openclaw" / "sandbox" / "xiami_demo_ledger.json"
 HDL = "shop-001"  # 海底捞·望京店
 CC = "shop-002"   # 凑凑火锅·望京
@@ -137,6 +142,10 @@ def main() -> None:
         _save_ledger(set())
         print(json.dumps({"ok": True, "action": "reset", "ledger": str(LEDGER)}, ensure_ascii=False))
         return
+
+    if not args.target:
+        print(json.dumps({"ok": False, "error": "未指定飞书目标群：设置环境变量 FEISHU_GROUP_CHAT_ID 或用 --target 传入 chat_id"}, ensure_ascii=False))
+        sys.exit(2)
 
     now = virtual_now()
     fired = _load_ledger()
