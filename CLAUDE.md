@@ -185,7 +185,7 @@ Demo 时这几个瞬间必须可控可复现：
 |---|---|---|
 | **Moonshot Kimi**（K2.5，256k） | LLM 后端 | OpenClaw `~/.openclaw/agents/main/agent/auth-profiles.json` 配置 |
 | **高德地图 Web API v5** | POI 搜索 + 路径规划 + 距离 + 营业时间（真数据） | 通过 `scripts/amap.py` 唯一封装入口 |
-| **豆包文生图** | Skill 3 漫画风格行程卡片 | 通过 `scripts/imagegen.py` 唯一封装入口（含 fallback） |
+| **豆包/即梦文生图**（**可选·未并入主线**） | Skill 3 行程卡片配图（**降级为可选**，文字版是主交付） | `scripts/imagegen.py` 在独立分支 `feat/skill3-imagegen`，如需再引 |
 | **飞书 Bot API**（WebSocket 模式） | 评委交互 channel | `openclaw channels add --channel feishu` |
 | **wttr.in**（开源天气 API） | 天气真数据 | `openclaw/skills/weather/SKILL.md` 已封装 |
 
