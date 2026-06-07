@@ -249,8 +249,16 @@ def conditions_ok(coupon: Coupon, t: datetime, context: dict[str, Any]) -> bool:
     c = coupon.conditions
     if c.get("member_only") and not context.get("is_member", False):
         return False
-    if c.get("new_customer") and not context.get("is_new_customer", False):
-        return False
+    if c.get("new_customer"):
+        # 新客券：用户对该券所属店必须是「新客」。
+        # context["ordered_shops"] = 用户有历史的店集合（意图层从订单历史算）；
+        # 缺省时回退到全局 is_new_customer 布尔（向后兼容引擎级测试）。
+        ordered = context.get("ordered_shops")
+        if ordered is not None:
+            if coupon.shop_id in ordered:
+                return False
+        elif not context.get("is_new_customer", False):
+            return False
     weekday_in = c.get("weekday_in")
     if weekday_in and t.isoweekday() not in weekday_in:
         return False

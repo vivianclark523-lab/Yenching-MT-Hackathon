@@ -120,8 +120,8 @@ def test_h_lunch_window():
 
 # ── Test I: 无券诚实降级（shop-017 炸酱面无券）──────────────────────
 def test_i_no_coupon():
-    r = bc([("dish-002", 1)], T("2026-06-07T18:05:00+08:00"), MEMBER)  # shop-017
-    # 仅平台/会员可叠：ce-005(-500)+ce-007(-300)；店铺无券
+    # shop-005 探鱼(dish-008)无店铺券；15:00 无整点神券时段 → 只剩平台/会员可叠
+    r = bc([("dish-008", 1)], T("2026-06-07T15:00:00+08:00"), MEMBER)
     check("I 无店铺券时只剩平台/会员券", combo_of(r) <= {"ce-005", "ce-007"}, str(combo_of(r)))
     check("I 仍返回有效实付", r["payable_cents"] > 0, str(r["payable_cents"]))
 
@@ -277,6 +277,41 @@ def test_t_kuaican_deal():
     check("T 默认京门(午市8折最便宜)", d["default"]["shop_id"] == "shop-027", d["default"]["shop_id"])
 
 
+# ── Test U: 新客券按店判定(有历史→失效，无历史→生效)──────────────────
+def test_u_new_customer():
+    t = T("2026-06-07T12:30:00+08:00")
+    new_ctx = {"is_member": True, "ordered_shops": {"shop-024", "shop-003", "shop-007", "shop-001"}}
+    r_new = ce.best_combo(["dish-035"], t=t, context=new_ctx, coupons=COUPONS, catalog=CATALOG)  # 杨国福
+    check("U 新客→杨国福新客券生效", any("新客" in c["name"] for c in r_new["coupons"]),
+          str([c["name"] for c in r_new["coupons"]]))
+    old_ctx = {"is_member": True, "ordered_shops": {"shop-032"}}  # 假设用户在杨国福有历史
+    r_old = ce.best_combo(["dish-035"], t=t, context=old_ctx, coupons=COUPONS, catalog=CATALOG)
+    check("U 老客→杨国福新客券失效", not any("新客" in c["name"] for c in r_old["coupons"]),
+          str([c["name"] for c in r_old["coupons"]]))
+
+
+# ── Test V: 轻食「品质优选」· O3 不贪便宜(4.1 被过滤并诚实 surface)─────
+def test_v_lightfood_quality():
+    import io
+    import contextlib
+    import types
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "meal-grocery-assistant" / "scripts"))
+    import meal_context as mc  # noqa: E402
+    from mocks.clock import reset_virtual_time
+
+    args = types.SimpleNamespace(want="轻食", objective="O3", budget_yuan=None,
+                                 rating_floor=4.2, member=True, virtual_time="2026-06-07T12:30:00+08:00")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        mc.cmd_deal(args)
+    reset_virtual_time()
+    d = json.loads(buf.getvalue())["data"]
+    check("V 轻食默认不是最便宜的4.1店(品质优选)", d["default"]["shop_id"] != "shop-041", d["default"]["shop_id"])
+    check("V 沙拉日记(4.1)被 surface 为更便宜踩雷",
+          "shop-041" in {r["shop_id"] for r in d["cheaper_but_risky"]},
+          str([r["shop_id"] for r in d["cheaper_but_risky"]]))
+
+
 def main() -> None:
     tests = [test_a_stacking, test_b_addon_unlocks_shenquan, test_c_time_before_shenquan,
              test_d_stock_sold_out, test_e_reproducible, test_f_member_condition,
@@ -284,7 +319,8 @@ def main() -> None:
              test_k_cross_shop, test_l_find_and_floor, test_m_cmd_deal_integration,
              test_n_time_lever_wait, test_o_time_lever_order_now, test_p_time_lever_neutral,
              test_q_expiring_coupons, test_r_scan_proactive,
-             test_s_hotpot_cross_shop, test_t_kuaican_deal]
+             test_s_hotpot_cross_shop, test_t_kuaican_deal,
+             test_u_new_customer, test_v_lightfood_quality]
     for fn in tests:
         print(f"\n[{fn.__name__}]")
         fn()
