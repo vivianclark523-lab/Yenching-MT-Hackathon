@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+"""确定性单测：mocks/coupon_engine.py（Skill 2 用券系统 P0 内核）。
+
+运行：python3 tests/test_coupon_engine.py
+无第三方依赖；纯 assert + 手算期望值。所有时间显式传入，结果必须可复现。
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+from mocks import coupon_engine as ce  # noqa: E402
+
+COUPONS = ce.load_coupons()
+CATALOG = ce.load_catalog()
+BY_ID = {c.id: c for c in COUPONS}
+
+MEMBER = {"is_member": True, "is_new_customer": False}
+NON_MEMBER = {"is_member": False, "is_new_customer": False}
+
+
+def T(iso: str) -> datetime:
+    return datetime.fromisoformat(iso)
+
+
+def combo_of(result) -> set[str]:
+    return {c["id"] for c in result["coupons"]}
+
+
+_passed = 0
+
+
+def check(label: str, cond: bool, detail: str = "") -> None:
+    global _passed
+    assert cond, f"FAIL: {label} :: {detail}"
+    _passed += 1
+    print(f"  ✓ {label}")
+
+
+def bc(basket, t, context):
+    return ce.best_combo(basket, t=t, context=context, coupons=COUPONS, catalog=CATALOG)
+
+
+# ── Test A: 旗舰篮子 A+B 满额叠券（18:05，会员）────────────────────────
+def test_a_stacking():
+    r = bc([("dish-010", 1), ("dish-013", 1)], T("2026-06-07T18:05:00+08:00"), MEMBER)
+    # 5100 商品；ce-001(-1200)+ce-003(-400)+ce-005(-500)+ce-007(-300)+ce-008(免配送-500)
+    check("A 实付=¥27.00", r["payable_cents"] == 2700, f"got {r['payable_cents']}")
+    check("A 省=¥29.00", r["saved_cents"] == 2900, f"got {r['saved_cents']}")
+    check("A 选中5张券", combo_of(r) == {"ce-001", "ce-003", "ce-005", "ce-007", "ce-008"}, str(combo_of(r)))
+    gaps = {g["coupon_id"] for g in r["threshold_gaps"]}
+    check("A 凑单缺口提示含神券 ce-006", "ce-006" in gaps, str(gaps))
+
+
+# ── Test B: 凑单到 ¥67 解锁整点神券（18:05）─────────────────────────
+def test_b_addon_unlocks_shenquan():
+    r = bc([("dish-010", 1), ("dish-013", 1), ("dish-012", 1)], T("2026-06-07T18:05:00+08:00"), MEMBER)
+    # 6700 商品；神券满65减20 触发：ce-001(-1200)+ce-003(-400)+ce-006(-2000)+ce-007(-300)+ce-008(免配)
+    check("B 实付=¥28.00", r["payable_cents"] == 2800, f"got {r['payable_cents']}")
+    check("B 用神券 ce-006、弃平台立减 ce-005", "ce-006" in combo_of(r) and "ce-005" not in combo_of(r), str(combo_of(r)))
+
+
+# ── Test C: 同篮子 17:55 神券未激活（时段）────────────────────────────
+def test_c_time_before_shenquan():
+    r = bc([("dish-010", 1), ("dish-013", 1), ("dish-012", 1)], T("2026-06-07T17:55:00+08:00"), MEMBER)
+    # 神券未到点 → 退回平台立减5：6700-(1200+400+500+300)=4300
+    check("C 实付=¥43.00（神券未激活）", r["payable_cents"] == 4300, f"got {r['payable_cents']}")
+    check("C 不含神券 ce-006", "ce-006" not in combo_of(r), str(combo_of(r)))
+
+
+# ── Test D: 18:25 神券库存秒空（monotonic_decay 归零）─────────────────
+def test_d_stock_sold_out():
+    r = bc([("dish-010", 1), ("dish-013", 1), ("dish-012", 1)], T("2026-06-07T18:25:00+08:00"), MEMBER)
+    # 18:00 放 80 张、4 张/分钟 → 18:25 已售罄 → 回落 ¥43
+    check("D 实付=¥43.00（神券售罄）", r["payable_cents"] == 4300, f"got {r['payable_cents']}")
+    check("D 不含神券 ce-006", "ce-006" not in combo_of(r), str(combo_of(r)))
+
+
+# ── Test E: 可复现（同输入两次完全一致）──────────────────────────────
+def test_e_reproducible():
+    args = ([("dish-010", 1), ("dish-013", 1), ("dish-012", 1)], T("2026-06-07T18:05:00+08:00"), MEMBER)
+    r1 = bc(*args)
+    r2 = bc(*args)
+    check("E 两次结果完全一致", r1 == r2, "non-deterministic!")
+
+
+# ── Test F: 会员条件门控 ─────────────────────────────────────────────
+def test_f_member_condition():
+    r = bc([("dish-010", 1), ("dish-013", 1)], T("2026-06-07T18:05:00+08:00"), NON_MEMBER)
+    # 非会员 → ce-007 不可用 → 比 Test A 多付 ¥3
+    check("F 非会员实付=¥30.00", r["payable_cents"] == 3000, f"got {r['payable_cents']}")
+    check("F 非会员不含会员红包 ce-007", "ce-007" not in combo_of(r), str(combo_of(r)))
+
+
+# ── Test G: 折扣券 + 封顶（rate, 整数运算）──────────────────────────
+def test_g_rate_cap():
+    items = [CATALOG.resolve("dish-001", 1)]  # 外婆家 番茄牛肉饭 ¥38, shop-003
+    pay = ce.payable(items, [BY_ID["ce-009"]], T("2026-06-07T12:00:00+08:00"), MEMBER)
+    # 88折：3800*(10000-8800)//10000 = 456；封顶1000不触发；配送500无券
+    check("G 88折减额=¥4.56", pay["product_reduction_cents"] == 456, f"got {pay['product_reduction_cents']}")
+    check("G 实付=3800-456+500=¥38.44", pay["payable_cents"] == 3844, f"got {pay['payable_cents']}")
+
+
+# ── Test H: 午市券时段（11-14 才生效）────────────────────────────────
+def test_h_lunch_window():
+    basket = [("dish-007", 1)]  # 京门老爆三 京味爆三样 ¥39, shop-027
+    lunch = bc(basket, T("2026-06-07T12:30:00+08:00"), MEMBER)
+    dinner = bc(basket, T("2026-06-07T18:30:00+08:00"), MEMBER)
+    check("H 午市含 ce-010 八折", "ce-010" in combo_of(lunch), str(combo_of(lunch)))
+    check("H 晚市不含 ce-010", "ce-010" not in combo_of(dinner), str(combo_of(dinner)))
+    check("H 午市实付 < 晚市实付", lunch["payable_cents"] < dinner["payable_cents"],
+          f"{lunch['payable_cents']} vs {dinner['payable_cents']}")
+
+
+# ── Test I: 无券诚实降级（shop-017 炸酱面无券）──────────────────────
+def test_i_no_coupon():
+    r = bc([("dish-002", 1)], T("2026-06-07T18:05:00+08:00"), MEMBER)  # shop-017
+    # 仅平台/会员可叠：ce-005(-500)+ce-007(-300)；店铺无券
+    check("I 无店铺券时只剩平台/会员券", combo_of(r) <= {"ce-005", "ce-007"}, str(combo_of(r)))
+    check("I 仍返回有效实付", r["payable_cents"] > 0, str(r["payable_cents"]))
+
+
+# ── Test J: 猪脚饭跨店比价 · O1 vs O3（4.2 达标线把“傻便宜”挡在外）──────
+def test_j_objectives_cross_shop():
+    t = T("2026-06-07T12:05:00+08:00")  # 午市神券在售
+    baskets = [["dish-020"], ["dish-024"], ["dish-027"]]  # 隆江4.6 / 阿婆4.3 / 潮味轩4.1
+    o1 = ce.optimize(baskets, t=t, context=MEMBER, objective="O1", coupons=COUPONS, catalog=CATALOG)
+    o3 = ce.optimize(baskets, t=t, context=MEMBER, objective="O3", coupons=COUPONS, catalog=CATALOG)
+    check("J O1 选潮味轩(4.1,绝对最便宜)", o1["best"]["basket_id"] == "dish-027", o1["best"]["basket_id"])
+    check("J O3 达标线4.2过滤4.1→选阿婆(4.3)", o3["best"]["basket_id"] == "dish-024", o3["best"]["basket_id"])
+    check("J O3 比 O1 贵(拿品质换的)", o3["best"]["payable_cents"] > o1["best"]["payable_cents"],
+          f"{o3['best']['payable_cents']} vs {o1['best']['payable_cents']}")
+
+
+# ── Test L: find_dishes 跨店命中 + rating 达标标记 ─────────────────────
+def test_l_find_and_floor():
+    found = set(CATALOG.find_dishes("猪脚饭"))
+    check("L find_dishes 命中6道猪脚饭", found == {"dish-020", "dish-021", "dish-024", "dish-025", "dish-027", "dish-028"}, str(found))
+    res = ce.optimize([["dish-020"], ["dish-024"], ["dish-027"]],
+                      t=T("2026-06-07T12:05:00+08:00"), context=MEMBER, coupons=COUPONS, catalog=CATALOG)
+    q = {r["basket_id"]: r["qualified"] for r in res["rows"]}
+    check("L 4.1店(潮味轩)未达标", q["dish-027"] is False, str(q))
+    check("L 4.3/4.6店达标", bool(q["dish-024"] and q["dish-020"]), str(q))
+
+
+# ── Test M: cmd_deal 端到端（意图层→比价→诚实surface）─────────────────
+def test_m_cmd_deal_integration():
+    import io
+    import contextlib
+    import types
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "meal-grocery-assistant" / "scripts"))
+    import meal_context as mc  # noqa: E402
+    from mocks.clock import reset_virtual_time
+
+    args = types.SimpleNamespace(want="猪脚饭", objective="O3", budget_yuan=None,
+                                 rating_floor=4.2, member=True,
+                                 virtual_time="2026-06-07T12:05:00+08:00")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        mc.cmd_deal(args)
+    reset_virtual_time()
+    out = json.loads(buf.getvalue())
+    d = out["data"]
+    check("M deal ok", out["ok"] is True, str(out.get("ok")))
+    check("M 默认推荐=阿婆(达标最便宜)", d["default"]["shop_id"] == "shop-029", d["default"]["shop_id"])
+    risky = {r["shop_id"] for r in d["cheaper_but_risky"]}
+    check("M 潮味轩(4.1)被诚实surface为更便宜踩雷", "shop-030" in risky, str(risky))
+    check("M 比价覆盖3家店", len({c["shop_id"] for c in d["comparison"]}) == 3, str(len(d["comparison"])))
+
+
+# ── Test K: 跨店自动分单合并 ─────────────────────────────────────────
+def test_k_cross_shop():
+    r = bc([("dish-010", 1), ("dish-001", 1)], T("2026-06-07T18:05:00+08:00"), MEMBER)  # shop-001 + shop-003
+    check("K 跨店标记", r.get("cross_shop") is True, str(r.get("cross_shop")))
+    check("K 拆成两单", len(r["orders"]) == 2, str(len(r["orders"])))
+    check("K 总实付=两单之和",
+          r["payable_cents"] == sum(o["payable_cents"] for o in r["orders"]), str(r["payable_cents"]))
+
+
+# ── Test N: 时间杠杆 · 神券未到点 → 建议等一会儿 ────────────────────
+def test_n_time_lever_wait():
+    ta = ce.time_advice(["dish-020"], T("2026-06-07T11:55:00+08:00"), context=MEMBER,
+                        coupons=COUPONS, catalog=CATALOG)
+    check("N 隆江 11:55 建议等", ta["wait_suggested"] is True, str(ta["wait_suggested"]))
+    bf = ta["best_future"]
+    check("N 等到 12:00 午市神券", bf["at"] == "2026-06-07T12:00+08:00", bf["at"])
+    check("N 等后券后¥20、省¥3", bf["payable_cents"] == 2000 and bf["save_cents"] == 300,
+          f"{bf['payable_cents']}/{bf['save_cents']}")
+
+
+# ── Test O: 时间杠杆 · 神券将秒空 → 提醒现在下单 ──────────────────────
+def test_o_time_lever_order_now():
+    ta = ce.time_advice(["dish-020"], T("2026-06-07T12:05:00+08:00"), context=MEMBER,
+                        coupons=COUPONS, catalog=CATALOG)
+    check("O 12:05 不建议等", ta["wait_suggested"] is False, str(ta["wait_suggested"]))
+    check("O 提醒 12:30 前下单(神券秒空)",
+          ta["order_now_before"] is not None and ta["order_now_before"]["at"] == "2026-06-07T12:30+08:00",
+          str(ta["order_now_before"]))
+
+
+# ── Test P: 时间杠杆 · 神券对该篮子无影响 → 不催不等 ──────────────────
+def test_p_time_lever_neutral():
+    # 阿婆单点 ¥24 < 神券满25门槛，神券永远用不上 → 等不等都一样
+    ta = ce.time_advice(["dish-024"], T("2026-06-07T11:55:00+08:00"), context=MEMBER,
+                        coupons=COUPONS, catalog=CATALOG)
+    check("P 阿婆无时间杠杆(不建议等)", ta["wait_suggested"] is False, str(ta["wait_suggested"]))
+    check("P 阿婆无秒空提醒", ta["order_now_before"] is None, str(ta["order_now_before"]))
+
+
+# ── Test Q: 服务找人 · 临期券扫描（held + expires_at 窗口）─────────────
+def test_q_expiring_coupons():
+    exp = ce.expiring_coupons(T("2026-06-07T21:30:00+08:00"), within_minutes=180, coupons=COUPONS)
+    check("Q 21:30 扫出1张临期券 ce-030", [c.id for c in exp] == ["ce-030"], str([c.id for c in exp]))
+    none = ce.expiring_coupons(T("2026-06-07T14:00:00+08:00"), within_minutes=180, coupons=COUPONS)
+    check("Q 14:00 窗口内无临期券", none == [], str([c.id for c in none]))
+
+
+# ── Test R: cmd_scan 端到端 · 凑单用掉临期券的主动推送 ────────────────
+def test_r_scan_proactive():
+    import io
+    import contextlib
+    import types
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "meal-grocery-assistant" / "scripts"))
+    import meal_context as mc  # noqa: E402
+    from mocks.clock import reset_virtual_time
+
+    args = types.SimpleNamespace(within_minutes=180, member=True, virtual_time="2026-06-07T21:30:00+08:00")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        mc.cmd_scan(args)
+    reset_virtual_time()
+    out = json.loads(buf.getvalue())
+    check("R scan 产出 1 条推送", len(out["pushes"]) == 1, str(len(out["pushes"])))
+    p = out["pushes"][0]
+    check("R 推送用掉了临期券", p["uses_expiring_coupon"] is True, str(p["uses_expiring_coupon"]))
+    check("R 凑单方案券后¥36(比单买炸鸡更省)", p["suggestion"]["payable"] == "¥36.00", p["suggestion"]["payable"])
+    check("R 推送的是炸鸡夜宵店", p["shop_name"].startswith("叫了个炸鸡"), p["shop_name"])
+
+
+def main() -> None:
+    tests = [test_a_stacking, test_b_addon_unlocks_shenquan, test_c_time_before_shenquan,
+             test_d_stock_sold_out, test_e_reproducible, test_f_member_condition,
+             test_g_rate_cap, test_h_lunch_window, test_i_no_coupon, test_j_objectives_cross_shop,
+             test_k_cross_shop, test_l_find_and_floor, test_m_cmd_deal_integration,
+             test_n_time_lever_wait, test_o_time_lever_order_now, test_p_time_lever_neutral,
+             test_q_expiring_coupons, test_r_scan_proactive]
+    for fn in tests:
+        print(f"\n[{fn.__name__}]")
+        fn()
+    print(f"\n✅ ALL PASS — {_passed} assertions across {len(tests)} tests")
+
+
+if __name__ == "__main__":
+    main()

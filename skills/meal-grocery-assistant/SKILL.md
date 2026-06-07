@@ -30,6 +30,7 @@ metadata:
 - 用户极忙："帮我直接点个饭"、"随便来个不踩雷的"、"我没空选"
 - 用户纠结："不知道吃什么"、"给我几个灵感"、"今天吃点啥"
 - 用户明确品类："想吃火锅"、"来个麻辣烫"、"帮我找个面"
+- 用户想吃某品类又要最优惠/比价："想吃猪脚饭哪家划算"、"哪家便宜"、"用券最优惠的那家"
 - 用户要省钱/品质："20 块以内"、"品质好一点"、"别预制菜"
 - 用户处于旅游状态，想吃当地特色
 - 饭点 + 常点店有优惠、天气影响饮食选择、日程显示明天有相同品类局
@@ -48,7 +49,7 @@ metadata:
 
 - 外卖和采购数据为 Mock 演示数据，向用户表达为"预计"或"可选方案"
 - 不自动支付、不自动提交真实订单；下单前必须二次确认
-- 用户忌口、预算、地址以当前对话显式输入优先；记忆和 Mock 画像只是默认值
+- 用户忌口、预算、地址以当前对话显式输入优先；`USER.md` / `MEMORY.md` 原生画像和 Mock 外卖数据只是默认值
 - 天气、日程、昨日订单用于避坑，不作为强制医疗或健康建议
 
 ---
@@ -60,6 +61,7 @@ metadata:
 | **极度繁忙** | "没空选"、"直接点"、"帮我定" | 1 个最稳一键下单方案 |
 | **纠结灵感** | "不知道吃什么"、"给我几个选择" | 4 张左右滑动推荐卡 |
 | **明确品类** | "想吃 X"、"就吃 X" | 常用方案 + 探索方案 |
+| **跨店比价** | "想吃 X，哪家划算/最便宜/最优惠用券" | 跨店券后比价表 + 默认推荐 |
 | **采购补货** | "猫粮/纸/水快没了" 或周期触发 | 1-3 个补货建议 |
 
 主动触发只发一次软提示。用户无回应则沉默，不追问、不重复打扰。
@@ -69,7 +71,7 @@ metadata:
 用户不需要说自己属于哪种场景，按自然语言自动分流：
 
 1. 明确采购词（猫粮、纸、水、补货、买东西）→ **采购补货**
-2. 明确品类词（火锅、麻辣烫、面、轻食、炸鸡等）→ **明确品类**
+2. 明确品类词（火锅、麻辣烫、面、猪脚饭、轻食、炸鸡等）→ **明确品类**；若同时带"哪家划算/最便宜/最优惠/比价/用券省钱"等价格诉求 → **跨店比价**
 3. 明确代订词（很忙、直接帮我下单、别问了、随便来个稳的）→ **极度繁忙**
 4. 灵感词（今天吃什么、不知道吃什么、再挑一挑、给我几个选择）→ **纠结灵感**
 5. 只有"帮我点外卖"且没有品类 → 默认按 **极度繁忙** 给 1 个稳妥方案
@@ -114,7 +116,7 @@ metadata:
 - 用户明确品类、预算、忌口、是否旅游、天气、日程
 - 是否要求立即下单
 
-先调用画像命令拿默认偏好：
+先使用已注入的 `USER.md` / `MEMORY.md` 画像作为默认偏好；再调用 Mock 命令补充 Skill 2 专用的历史订单、复购和采购周期数据：
 
 ```bash
 python3 skills/meal-grocery-assistant/scripts/meal_context.py profile
@@ -211,6 +213,42 @@ python3 skills/meal-grocery-assistant/scripts/meal_context.py recommend \
 2. 我不满意，还想再挑一挑
 ```
 
+### Step 3B · 跨店比价：同一道菜，哪家券后最便宜
+
+用户想吃某品类、且在意价格/优惠（"哪家划算"、"最便宜"、"用券最优惠"）时，把核心菜名作为 `--want` 传入，脚本会跨店把每家"最优呈现（单点/套餐/凑单）"的券后实付比出来：
+
+```bash
+python3 skills/meal-grocery-assistant/scripts/meal_context.py deal --want "猪脚饭"
+```
+
+> ⚠️ **所有价格、用券、券后实付、是否达标都来自脚本 JSON，严禁自己口算或编造**。你只负责把 JSON 渲染成话术。
+
+读 `data` 渲染：
+
+- `default` = 默认推荐（达标 rating ≥ 4.2 里券后最便宜）
+- `comparison` = 各店最优呈现，按券后价排序（店名 / 菜或套餐 / 原价 / 券后 / 用了哪些券 / 是否达标）
+- `cheaper_but_risky` = 比默认更便宜但评分未达标的店 —— **必须诚实亮出来让用户自己选，不要藏**
+- `quality_upsell` = 达标里更高分的替代（"多花 ¥X 更稳"）
+- 每行的 `addon_hint` = 凑单提示（"再凑 ¥X 能上某券、省 ¥Y"）
+- 每行的 `wait` = 时间杠杆：`action:"wait"` → "等到 `until`（`wait_minutes` 分钟后）神券激活，能到 `payable`、省 `save`"；`action:"order_now"` → "`before` 后那张券失效/秒空会变贵，建议现在下单"；`null` = 等不等都一样
+
+输出模板：
+
+```text
+想吃<品类>，我帮你比了几家券后价：
+
+默认给你：<default.shop_name>｜<presentation>｜券后 <default.payable>（<rating>分）
+理由：达标里最便宜，用了 <coupons>
+
+想更稳：<upsell.shop_name>｜券后 <upsell.payable>（<rating>分），多花一点更靠谱
+想更省：<risky.shop_name> 券后 <risky.payable>，但只有 <rating> 分有点踩雷，要试吗？
+
+（如某家带 wait）想吃 <shop>：现在 <payable>，再等 <wait_minutes> 分钟到 <until> 的神券能压到 <save> 的差价；
+或：<shop> 那张神券 <before> 就秒空了，要的话现在下。
+
+要哪家？定了我再给你确认订单。
+```
+
 ### Step 4 · 采购补货
 
 ```bash
@@ -240,6 +278,26 @@ python3 skills/meal-grocery-assistant/scripts/meal_context.py grocery --need aut
 
 确认后我再提交。
 ```
+
+### 主动出击 · 临期券提醒（服务找人，后台触发）
+
+不等用户开口：后台定时（cron / heartbeat）扫描用户钱包里**即将过期**的券，算"怎么用掉它最划算"，主动推一条软提示。
+
+```bash
+python3 skills/meal-grocery-assistant/scripts/meal_context.py scan
+```
+
+读 `pushes`（**为空则保持沉默、不打扰**）：每条含临期券、过期时刻、`uses_expiring_coupon`，以及 `suggestion`（用掉它的最优凑单：店名 / 菜 / 原价 / 券后 / 省了多少 / 用了哪些券）。
+
+输出模板（仅在有 push 时发、且只发一次）：
+
+```text
+你那张「<coupon.description>」今晚就过期了。
+按你常点的 <suggestion.presentation> 正好凑到门槛，用掉这张券券后 <suggestion.payable>（省 <suggestion.saved>），
+比不用更划算，要我帮你下单吗？
+```
+
+> ⚠️ 主动推送只发一次软提示；用户无回应则沉默，不追问、不重复打扰。`scan` 只产出"待发推送"，不自动下单。
 
 ---
 
@@ -298,6 +356,7 @@ python3 skills/meal-grocery-assistant/scripts/meal_context.py grocery --need aut
 | 忙碌代订 | `我给你配一个稳的：\n<店名>｜<菜品>｜预计 ¥<价格>\n理由：<...>\n要我按这个下单吗？` |
 | 灵感卡 | `给你 4 张卡，左右滑一下就能定：\n① 高性价比｜稳妥\n...` |
 | 明确品类 | `想吃 <品类> 的话，我给你两个：\n常用：...\n探索：...` |
+| 跨店比价 | `想吃<品类>，我帮你比了几家券后价：\n默认：<店>｜券后<价>（<分>）\n想更稳：...\n想更省但踩雷：...\n要哪家？` |
 | 采购补货 | `这几样差不多该补了：\n<商品>｜<数量>｜预计 ¥<价格>` |
 | 无可用方案 | `这个条件下我不硬凑。卡住的是：<原因>。要不要放宽 <预算/品类/范围>？` |
 | 下单确认 | `下单前确认一下：\n<明细>\n确认后我再提交。` |
@@ -309,10 +368,12 @@ python3 skills/meal-grocery-assistant/scripts/meal_context.py grocery --need aut
 
 | 命令 | 用途 |
 |---|---|
-| `python3 skills/meal-grocery-assistant/scripts/meal_context.py profile` | 汇总用户外卖画像 |
+| `python3 skills/meal-grocery-assistant/scripts/meal_context.py profile` | 汇总 Skill 2 Mock 外卖画像与历史数据 |
 | `python3 skills/meal-grocery-assistant/scripts/meal_context.py recommend --scenario busy` | 极忙场景 top 1 |
 | `python3 skills/meal-grocery-assistant/scripts/meal_context.py recommend --scenario inspiration` | 纠结场景 4 张卡 |
 | `python3 skills/meal-grocery-assistant/scripts/meal_context.py recommend --scenario category --category "<品类>"` | 明确品类常用 + 探索 |
+| `python3 skills/meal-grocery-assistant/scripts/meal_context.py deal --want "<品类>"` | 跨店同品类券后比价（默认 O3 达标最便宜，含凑单/时间杠杆/诚实surface踩雷） |
+| `python3 skills/meal-grocery-assistant/scripts/meal_context.py scan` | 服务找人：扫临期券 → 给"用掉它的最优凑单"主动推送（无则沉默） |
 | `python3 skills/meal-grocery-assistant/scripts/meal_context.py grocery --need auto` | 周期采购补货 |
 
 ---
