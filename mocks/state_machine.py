@@ -18,12 +18,42 @@ mocks/state_machine.py — Mock 状态机基类（3 Skill 共用）
 
 from __future__ import annotations
 
+import json
 import math
+import os
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from typing import Any
 
 TZ_BEIJING = timezone(timedelta(hours=8))
+
+
+# ——— 沙盒覆盖层（仅当环境变量 SANDBOX_OVERRIDES 指向一个 JSON 时生效）———
+# 设计：沙盒控制台运行 skill 时设 SANDBOX_OVERRIDES=<path>，让"逐店/逐券改参数 + 注入突发事件"
+# 这类 demo 调控生效；而**测试、普通 skill 调用、已部署 agent 都不带这个环境变量 → 零影响、零污染**。
+# 覆盖只作用于状态机参数与事件，确定可复现（同覆盖+同时间永远同结果）。schema：
+#   { "machines": { "<target_id>": { "params": {..覆盖..}, "events": [{"time","delta","reason"}] } } }
+_overlay_cache: dict | None = None
+
+
+def _load_overlay() -> dict:
+    global _overlay_cache
+    if _overlay_cache is None:
+        _overlay_cache = {}
+        try:
+            p = os.environ.get("SANDBOX_OVERRIDES")
+            if p and Path(p).exists():
+                _overlay_cache = json.loads(Path(p).read_text(encoding="utf-8")) or {}
+        except Exception:
+            _overlay_cache = {}
+    return _overlay_cache
+
+
+def _overlay_for(target_id: str | None) -> dict | None:
+    if not target_id:
+        return None
+    return (_load_overlay().get("machines") or {}).get(target_id)
 
 
 def _parse_iso(s: str) -> datetime:
@@ -194,9 +224,15 @@ def build_state_machine(sm_config: dict, events: list[dict] | None = None) -> Ba
     Returns:
         具体状态机实例
     """
-    events = events or []
+    events = list(events or [])
     sm_type = sm_config.get("type", "monotonic_decay")
-    params = sm_config.get("params", {})
+    params = dict(sm_config.get("params", {}))
+
+    # 沙盒覆盖层：按 target_id 覆盖参数 + 追加注入事件（无 SANDBOX_OVERRIDES 环境变量时此处恒为空，零影响）
+    ov = _overlay_for(sm_config.get("target_id"))
+    if ov:
+        params.update(ov.get("params", {}) or {})
+        events = events + list(ov.get("events", []) or [])
 
     if sm_type == "monotonic_decay":
         return MonotonicDecayMachine(params, events)

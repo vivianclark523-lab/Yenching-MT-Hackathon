@@ -141,9 +141,10 @@ def _coupon_for(shop_id, t):
     return None
 
 
-def query_business(poi):
-    """查指定 POI 的业务层状态，返回 data dict。"""
-    now = virtual_now()
+def query_business(poi, at=None):
+    """查指定 POI 的业务层状态，返回 data dict。
+    at 为 None 时用全局虚拟时钟；传入 datetime 时按该时刻求值（沙盒查"行程各站到达时刻"用）。"""
+    now = at or virtual_now()
     result = {"poi": poi, "virtual_now": now.isoformat(timespec="minutes"),
               "queue_tables": None, "eta_minutes": None, "coupon": None, "ticket_left": None}
 
@@ -179,9 +180,12 @@ def query_business(poi):
 def main():
     ap = argparse.ArgumentParser(description="业务层 Mock（排队/券/票务，随虚拟时钟）")
     ap.add_argument("--poi", required=True, help="poi_id 或店名")
+    ap.add_argument("--virtual-time", default=None, dest="virtual_time",
+                    help="按指定时刻求值（ISO，不传则用全局虚拟时钟）")
     args = ap.parse_args()
     try:
-        data = query_business(args.poi)
+        at = _parse_iso(args.virtual_time) if args.virtual_time else None
+        data = query_business(args.poi, at=at)
         print(json.dumps({"ok": True, "mode": "mock", "cmd": "business", "data": data},
                          ensure_ascii=False, indent=2))
     except Exception as exc:

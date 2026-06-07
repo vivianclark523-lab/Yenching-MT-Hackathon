@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🦞 本地生活管家 · 沙盒控制台</title>
+<style>
+  :root { --bg:#0f1115; --panel:#161922; --card:#1d2129; --line:#2a2f3a; --fg:#e8eaed; --mut:#9aa3b2;
+          --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --accent:#f59e0b; --blue:#60a5fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:14px/1.55 -apple-system,"PingFang SC",system-ui,sans-serif; }
+  header { padding:12px 22px; border-bottom:1px solid var(--line);
+           display:flex; align-items:center; gap:20px; }
+  h1 { font-size:16px; margin:0; font-weight:600; white-space:nowrap; }
+  .clock { display:flex; align-items:baseline; gap:10px; margin-left:auto; }
+  .clock .t { font-size:30px; font-weight:700; letter-spacing:.5px; font-variant-numeric:tabular-nums; }
+  .badge { font-size:11px; padding:2px 9px; border-radius:999px; border:1px solid var(--line); color:var(--mut); }
+  .badge.fixed { color:var(--accent); border-color:var(--accent); }
+  .badge.realtime { color:var(--ok); border-color:var(--ok); }
+
+  .wrap { display:grid; grid-template-columns:320px 1fr; gap:0; height:calc(100vh - 53px); }
+  .control { background:var(--panel); border-right:1px solid var(--line); padding:16px; overflow:auto; }
+  .effect  { padding:16px 20px; overflow:auto; }
+
+  .grp { margin-bottom:18px; }
+  .grp h3 { font-size:12px; color:var(--mut); margin:0 0 8px; font-weight:600; text-transform:none; letter-spacing:.3px; }
+  .rowx { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  input[type=datetime-local], input.num { background:var(--card); color:var(--fg);
+        border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-size:13px; }
+  input.num { width:70px; }
+  select { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:7px 9px; font-size:13px; width:100%; }
+  #slider { width:100%; accent-color:var(--accent); margin:2px 0; }
+  button { background:var(--card); color:var(--fg); border:1px solid var(--line);
+           border-radius:8px; padding:6px 11px; font-size:13px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.on { background:var(--accent); color:#1a1205; border-color:var(--accent); font-weight:600; }
+  button.bk { background:#222a38; font-size:12px; }
+  button.reset { color:var(--ok); border-color:var(--ok); width:100%; margin-top:6px; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .seg button { border:0; border-radius:0; }
+  .hint { font-size:11px; color:var(--mut); margin-top:5px; }
+
+  .cause { background:#1a1f17; border:1px solid var(--ok); border-radius:10px; padding:9px 12px;
+           font-size:13px; margin-bottom:14px; min-height:20px; }
+  .cause .a { color:var(--blue); } .cause .r { color:var(--ok); font-weight:600; }
+  .cause.empty { color:var(--mut); border-color:var(--line); background:var(--card); }
+
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+  .band2 { display:grid; grid-template-columns:1.6fr 1fr; gap:14px; }
+  .band2 .panel { margin-bottom:0; }
+  @media (max-width:880px){ .band2 { grid-template-columns:1fr; } }
+  .panel h2 { font-size:13px; margin:0 0 10px; color:var(--mut); font-weight:600; }
+  /* Skill 3 行程时间线 */
+  .trip { display:flex; align-items:stretch; flex-wrap:wrap; }
+  .stop { flex:1; min-width:160px; background:#15191f; border:1px solid var(--line); border-radius:10px; padding:10px 11px; }
+  .stop .when { font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .stop .lbl { font-size:12px; margin:2px 0 6px; }
+  .stop .meta { font-size:12px; color:var(--mut); }
+  .arrow { align-self:center; color:var(--mut); padding:0 10px; font-size:18px; }
+  .tk-ok { color:var(--ok); } .tk-bad { color:var(--bad); }
+  .deal-default { background:#13231b; border:1px solid var(--ok); border-radius:10px; padding:12px; margin-bottom:10px; }
+  .pay { font-size:24px; font-weight:700; color:var(--ok); font-variant-numeric:tabular-nums; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .mut { color:var(--mut); } .small { font-size:12px; }
+  .chip { font-size:11px; padding:1px 7px; border-radius:6px; background:#222834; color:var(--mut); margin-right:4px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:6px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--mut); font-weight:500; font-size:11px; }
+  .q-ok { color:var(--ok); } .q-bad { color:var(--bad); }
+  .wait { color:var(--warn); font-size:12px; } .now { color:var(--blue); font-size:12px; }
+  .push { border:1px solid var(--accent); border-radius:10px; padding:11px; margin-bottom:9px; background:#221b0e; }
+  .push .pay { font-size:16px; color:var(--accent); }
+  .empty { color:var(--mut); font-style:italic; padding:6px 0; }
+  .err { color:var(--bad); font-size:12px; }
+  .qbar { display:inline-block; height:8px; border-radius:4px; background:var(--accent); vertical-align:middle; }
+  .gantt { display:inline-block; height:6px; border-radius:3px; background:var(--blue); vertical-align:middle; }
+  @keyframes flash { 0%{ background:#fbbf24; color:#1a1205; border-radius:4px; } 100%{ background:transparent; } }
+  .flash { animation:flash 1s ease-out; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🦞 本地生活管家 · 沙盒控制台</h1>
+  <div class="clock"><span class="t" id="clockTime">—</span><span class="badge" id="clockMode">—</span></div>
+</header>
+
+<div class="wrap">
+  <!-- ============ 控制区 ============ -->
+  <aside class="control">
+    <div class="grp">
+      <h3>🎬 场景预设（一键设好整个世界态）</h3>
+      <select id="presetSel" onchange="applyPreset(this.value)"><option value="">— 选一个场景 —</option></select>
+      <div class="hint">一键把时钟 + 会员 + 想吃 + 目标全设好，演一个完整剧本</div>
+    </div>
+
+    <div class="grp">
+      <h3>⏱ 虚拟时钟</h3>
+      <input type="range" id="slider" min="600" max="1439" step="5" oninput="onSliderInput()" onchange="onSliderChange()">
+      <div class="rowx" style="justify-content:space-between">
+        <span class="small mut">← 拖动扫一整天 →</span><span class="small" id="sliderTime" style="color:var(--accent);font-weight:700">—</span>
+      </div>
+      <div class="rowx" style="margin-top:6px"><input type="datetime-local" id="dt" step="60"><button onclick="setFromInput()">设定</button></div>
+      <div class="rowx" style="margin-top:6px">
+        <button class="bk" onclick="jump('2026-06-07T12:05:00+08:00','午市神券激活')">神券12:05</button>
+        <button class="bk" onclick="jump('2026-06-07T12:30:00+08:00','神券秒空')">秒空12:30</button>
+        <button class="bk" onclick="jump('2026-06-07T18:25:00+08:00','晚高峰')">高峰18:25</button>
+        <button class="bk" onclick="jump('2026-06-07T21:30:00+08:00','夜宵')">夜宵21:30</button>
+      </div>
+      <button class="reset" onclick="resetBaseline()">↻ 复位到 demo 基线 (18:00)</button>
+    </div>
+
+    <div class="grp">
+      <h3>🍽️ 想吃什么（Skill 2 跨店比价）</h3>
+      <div class="rowx" id="wantTags"></div>
+      <div class="rowx" style="margin-top:8px">
+        <input class="num" id="wantInput" placeholder="自定义品类" style="width:110px">
+        <button onclick="setWantInput()">切换</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>🎭 用户 / 意图</h3>
+      <div class="rowx">
+        <button id="memberBtn" onclick="toggleMember()">会员</button>
+        <span class="seg">
+          <button id="objO3" onclick="setObjective('O3')">达标最省</button>
+          <button id="objO1" onclick="setObjective('O1')">全场最低</button>
+        </span>
+      </div>
+      <div class="rowx" style="margin-top:8px">
+        <span class="small mut">达标线</span><input class="num" id="rfInput" value="4.2" onchange="setRF()">
+        <span class="small mut">预算¥</span><input class="num" id="budgetInput" placeholder="不限" onchange="setBudget()">
+      </div>
+      <div class="rowx" style="margin-top:8px">
+        <span class="small mut">天气</span>
+        <span class="seg" id="weatherSeg">
+          <button data-w="normal" onclick="setWeather('normal')">正常</button>
+          <button data-w="hot" onclick="setWeather('hot')">🔥热</button>
+          <button data-w="cold" onclick="setWeather('cold')">❄冷</button>
+          <button data-w="rain" onclick="setWeather('rain')">🌧雨</button>
+        </span>
+      </div>
+      <div class="hint">比价随这些实时重算；天气只影响下方「采购比价」的到期清单</div>
+    </div>
+
+    <details class="grp" id="advDrawer">
+      <summary style="cursor:pointer;font-size:12px;color:var(--mut);font-weight:600">⚙️ 高级调参 · 覆盖层（评委亲手拧）</summary>
+      <div style="margin-top:10px">
+        <div class="small mut" style="margin-bottom:5px">💥 注入突发事件（从当前时刻起生效）</div>
+        <select id="evShop" style="margin-bottom:6px"></select>
+        <select id="evType" style="margin-bottom:6px"></select>
+        <button onclick="injectEvent()" style="width:100%">💥 注入到该店</button>
+
+        <div class="small mut" style="margin:14px 0 5px">🐌 排队速度（每分钟过几位，调小=排更慢）</div>
+        <div id="rateRows"></div>
+
+        <button class="reset" style="color:var(--bad);border-color:var(--bad);margin-top:10px" onclick="clearOverrides()">✕ 清空所有覆盖</button>
+        <div class="hint" id="ovStatus">无覆盖</div>
+      </div>
+    </details>
+  </aside>
+
+  <!-- ============ 效果区 ============ -->
+  <main class="effect">
+    <div class="cause empty" id="cause">调一下左边的时钟或意图，这里会说明「因为你改了 X，所以管家把 Y 改成了 Z」</div>
+
+    <section class="panel">
+      <h2>🍲 Skill 1 · 多店排队（速度 + 预计入座）</h2>
+      <div id="queue"></div>
+    </section>
+
+    <div class="band2">
+      <section class="panel">
+        <h2>🎟️ Skill 2 · 跨店用券比价 <span class="mut small" id="dealWant"></span></h2>
+        <div id="deal"></div>
+      </section>
+      <section class="panel">
+        <h2>📨 待发推送 · 服务找人</h2>
+        <div id="pushes"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>🛒 Skill 2 · 采购比价（券后单价 + 凑一单）<span class="mut small" id="grocWeather"></span></h2>
+      <div id="grocery"></div>
+    </section>
+
+    <section class="panel">
+      <h2>🗺️ Skill 3 · 今晚行程（沿途排队×券×余票，随时钟漂移）<span class="mut small" id="tripStart"></span></h2>
+      <div id="trip"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const hhmm = iso => (iso||"").slice(0,16).replace("T"," ");
+const api = async (p, o) => (await fetch(p, o)).json();
+
+const WANT_TAGS = ["猪脚饭", "火锅", "快餐", "麻辣烫", "家常小炒", "轻食", "茶饮", "甜点"];
+let controls = { want:"猪脚饭", member:true, objective:"O3", budget:"", rating_floor:"4.2", weather:"hot" };
+let prev = null;        // 上一次 state，用于 diff/高亮/因果
+let lastAction = "";    // 人类动作标签
+let baseline = "2026-06-07T18:00:00+08:00";
+let presets = [];
+const demoDate = () => (baseline||"2026-06-07").slice(0,10);
+const minFromIso = iso => { const p=(iso||"").slice(11,16).split(":"); return p.length===2?(+p[0])*60+(+p[1]):0; };
+const isoFromMin = m => `${demoDate()}T${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}:00+08:00`;
+
+function qs(){
+  return new URLSearchParams({ want:controls.want, member:controls.member?1:0,
+    objective:controls.objective, budget:controls.budget, rating_floor:controls.rating_floor,
+    weather:controls.weather }).toString();
+}
+
+// ---- 控件动作（都先记 lastAction，再刷新）----
+async function jump(time, label){ lastAction = `时间 → ${hhmm(time)}（${label}）`; await api("/api/clock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"fixed",time})}); await load(); }
+async function setFromInput(){ const v=$("#dt").value; if(!v)return; const t=v.length===16?v+":00+08:00":v; lastAction=`时间 → ${hhmm(t)}`; await api("/api/clock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"fixed",time:t})}); await load(); }
+async function resetBaseline(){ lastAction="复位到 demo 基线 18:00"; controls={want:"猪脚饭",member:true,objective:"O3",budget:"",rating_floor:"4.2",weather:"hot"};
+  $("#presetSel").value=""; $("#rfInput").value="4.2"; $("#budgetInput").value="";
+  await postOverride({action:"clear"});
+  await api("/api/clock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"fixed",time:baseline})}); await load(); await loadOverrides(); }
+function setWant(w){ if(w===controls.want)return; lastAction=`想吃 ${controls.want} → ${w}`; controls.want=w; load(); }
+function setWantInput(){ const v=$("#wantInput").value.trim(); if(v) setWant(v); }
+function toggleMember(){ const nv=!controls.member; lastAction=`会员 ${controls.member?'开':'关'} → ${nv?'开':'关'}`; controls.member=nv; load(); }
+function setObjective(o){ if(o===controls.objective)return; lastAction=`目标 ${controls.objective} → ${o}`; controls.objective=o; load(); }
+function setRF(){ const v=$("#rfInput").value.trim(); lastAction=`达标线 → ${v}分`; controls.rating_floor=v; load(); }
+function setBudget(){ const v=$("#budgetInput").value.trim(); lastAction=v?`预算 → ¥${v}`:`预算 → 不限`; controls.budget=v; load(); }
+function setWeather(w){ if(w===controls.weather)return; lastAction=`天气 ${controls.weather} → ${w}`; controls.weather=w; load(); }
+function renderPresets(){ $("#presetSel").innerHTML = `<option value="">— 选一个场景 —</option>` + presets.map((p,i)=>`<option value="${i}">${esc(p.label)}</option>`).join(""); }
+async function applyPreset(i){ const p=presets[+i]; if(!p) return;
+  lastAction = `场景预设：${p.label}`;
+  controls.want=p.want; controls.member=!!p.member; controls.objective=p.objective;
+  controls.budget=p.budget||""; controls.rating_floor=p.rating_floor||"4.2";
+  $("#rfInput").value=controls.rating_floor; $("#budgetInput").value=controls.budget;
+  await api("/api/clock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"fixed",time:p.time})});
+  await load();
+}
+function onSliderInput(){ $("#sliderTime").textContent = isoFromMin(+$("#slider").value).slice(11,16); }
+async function onSliderChange(){ const t=isoFromMin(+$("#slider").value); lastAction=`时间 → ${t.slice(11,16)}`;
+  await api("/api/clock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"fixed",time:t})}); await load(); }
+
+// ---- 高级调参覆盖层（Phase 3）----
+let ovData = {overrides:{}, event_library:[], shops:[]};
+async function loadOverrides(){
+  ovData = await api("/api/overrides");
+  $("#evShop").innerHTML = (ovData.shops||[]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  $("#evType").innerHTML = (ovData.event_library||[]).map(e=>`<option value="${e.id}">${esc(e.label)} (${e.delta>0?'+':''}${e.delta})</option>`).join("");
+  $("#rateRows").innerHTML = (ovData.shops||[]).map(s=>{
+    const cur = (((ovData.overrides.machines||{})[s.id]||{}).params||{}).rate_per_minute ?? s.rate ?? '';
+    return `<div class="rowx" style="margin-bottom:4px"><span class="small" style="flex:1">${esc((s.name||'').slice(0,6))}</span><input class="num" id="rate_${s.id}" value="${cur}" style="width:58px"><button onclick="setRate('${s.id}')">改</button></div>`;
+  }).join("");
+  const keys=Object.keys(ovData.overrides.machines||{});
+  $("#ovStatus").textContent = keys.length?`覆盖中：${keys.join(', ')}`:"无覆盖";
+}
+async function postOverride(body){ const r=await api("/api/overrides",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); ovData.overrides=r.overrides||{}; return r; }
+async function injectEvent(){ const tid=$("#evShop").value, eid=$("#evType").value;
+  const ev=(ovData.event_library||[]).find(e=>e.id===eid), sh=(ovData.shops||[]).find(s=>s.id===tid);
+  lastAction=`💥 注入「${ev?ev.label:eid}」@ ${sh?sh.name:tid}`;
+  await postOverride({action:"inject",target_id:tid,event_id:eid}); await load(); await loadOverrides(); }
+async function setRate(tid){ const v=$(`#rate_${tid}`).value;
+  lastAction=`🐌 排队速度 @ ${tid} → ${v}/分`;
+  await postOverride({action:"set_rate",target_id:tid,rate:v}); await load(); await loadOverrides(); }
+async function clearOverrides(){ lastAction="✕ 清空所有覆盖"; await postOverride({action:"clear"}); await load(); await loadOverrides(); }
+
+// ---- 渲染 ----
+function renderClock(clock, vtime){
+  $("#clockTime").textContent = hhmm(vtime);
+  const m=$("#clockMode");
+  if(clock.mode==="fixed"){ m.textContent="虚拟·已锁定"; m.className="badge fixed"; } else { m.textContent="真实时间"; m.className="badge realtime"; }
+  if(vtime){ $("#dt").value=vtime.slice(0,16);
+    const sl=$("#slider"); if(sl){ sl.value=Math.max(600,Math.min(1439,minFromIso(vtime))); $("#sliderTime").textContent=vtime.slice(11,16); } }
+}
+function renderControls(){
+  $("#wantTags").innerHTML = WANT_TAGS.map(w=>`<button class="${w===controls.want?'on':''}" onclick="setWant('${w}')">${w}</button>`).join("");
+  $("#memberBtn").className = controls.member?"on":"";
+  $("#memberBtn").textContent = controls.member?"会员 ●ON":"会员 ○OFF";
+  $("#objO3").className = controls.objective==="O3"?"on":"";
+  $("#objO1").className = controls.objective==="O1"?"on":"";
+  document.querySelectorAll("#weatherSeg button").forEach(b=>b.className = b.dataset.w===controls.weather?"on":"");
+}
+function renderCause(s){
+  const el=$("#cause");
+  if(!lastAction){ el.className="cause empty"; return; }
+  let r=null;
+  // 1) Skill2 默认推荐变化
+  const a=prev&&prev.skill2_deal&&prev.skill2_deal.default, b=s.skill2_deal&&s.skill2_deal.default;
+  if(a&&b&&(a.shop_name!==b.shop_name||a.payable!==b.payable))
+    r=`比价默认 ${esc(a.shop_name)} ${esc(a.payable)} → <b>${esc(b.shop_name)} ${esc(b.payable)}</b>`;
+  // 2) Skill1 排队变化（注入事件/改速度时主要看这里）
+  if(!r){
+    const pm={}; ((prev&&prev.skill1_queue)||[]).forEach(q=>pm[q.shop_id]=q);
+    for(const q of (s.skill1_queue||[])){ const pq=pm[q.shop_id];
+      if(pq && pq.queue_tables!==q.queue_tables){
+        r=`${esc(q.name||q.shop_id)} 排队 ${pq.queue_tables}→<b>${q.queue_tables}</b>桌`+(q.seated_at?`，预计入座 ${q.seated_at}`:''); break; }
+    }
+  }
+  if(!r && !a && b) r=`比价默认 ${esc(b.shop_name)} ${esc(b.payable)}`;
+  if(!r) r="结果无明显变化";
+  el.className="cause";
+  el.innerHTML = `<span class="a">${esc(lastAction)}</span> &nbsp;⟹&nbsp; <span class="r">${r}</span>`;
+}
+function waitHtml(w){
+  if(!w) return '<span class="mut small">—</span>';
+  if(w.action==="wait") return `<span class="wait">⏳ 等到 ${hhmm(w.until)}（${w.wait_minutes}分）省 ${esc(w.save)}</span>`;
+  if(w.action==="order_now") return `<span class="now">⚡ ${hhmm(w.before)} 前秒空，现在下</span>`;
+  return '<span class="mut small">—</span>';
+}
+function renderDeal(s){
+  const deal=s.skill2_deal, el=$("#deal");
+  $("#dealWant").textContent = `（${controls.want}）`;
+  if(!deal||deal.error){ el.innerHTML=`<div class="err">deal 失败：${esc(deal&&deal.error)}</div>`; return; }
+  if(deal.reason){ el.innerHTML=`<div class="empty">${esc(deal.reason)}</div>`; return; }
+  const d=deal.default||{}, pd=prev&&prev.skill2_deal&&prev.skill2_deal.default;
+  const payFlash = pd && pd.payable!==d.payable ? "flash":"";
+  let h=`<div class="deal-default">
+      <div class="row"><b>默认推荐 · ${esc(d.shop_name)}</b><span class="pay ${payFlash}">${esc(d.payable)}</span></div>
+      <div class="small mut">${esc(d.presentation)} · ${d.rating}分 ${d.qualified?'<span class="q-ok">达标</span>':'<span class="q-bad">踩雷</span>'} · 省${esc(d.saved)}</div>
+      <div class="small" style="margin-top:4px">${(d.coupons||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>
+      ${d.wait?('<div style="margin-top:4px">'+waitHtml(d.wait)+'</div>'):''}
+    </div>
+    <table><thead><tr><th>店（按券后价）</th><th>呈现</th><th>券后</th><th>评分</th><th>时间杠杆</th></tr></thead><tbody>`;
+  (deal.comparison||[]).forEach(c=>{
+    h+=`<tr><td>${esc(c.shop_name)}</td><td class="small mut">${esc(c.presentation)}</td>
+      <td><b>${esc(c.payable)}</b></td><td class="${c.qualified?'q-ok':'q-bad'}">${c.rating}${c.qualified?'':' ⚠'}</td>
+      <td>${waitHtml(c.wait)}</td></tr>`;
+  });
+  h+=`</tbody></table>`;
+  (deal.cheaper_but_risky||[]).forEach(r=>{ h+=`<div class="small" style="margin-top:7px;color:var(--warn)">💡 更省但踩雷：${esc(r.shop_name)} 券后 ${esc(r.payable)}（${r.rating}分），要试？</div>`; });
+  (deal.notes||[]).forEach(n=>h+=`<div class="small mut" style="margin-top:5px">· ${esc(n)}</div>`);
+  el.innerHTML=h;
+}
+function renderPushes(s){
+  const el=$("#pushes"), p=s.pushes||[];
+  if(!p.length){ el.innerHTML=`<div class="empty">当前无待发推送（保持沉默，不打扰）</div>`; return; }
+  el.innerHTML=p.map(x=>{ const sg=x.suggestion||{};
+    return `<div class="push"><div class="small mut">⏰ 临期 · ${esc(x.coupon&&x.coupon.expires_at)}</div>
+      <div><b>${esc(x.coupon&&x.coupon.description)}</b></div>
+      <div class="small" style="margin-top:3px">${esc(x.shop_name)} · ${esc(sg.presentation)} → <span class="pay">${esc(sg.payable)}</span>（省 ${esc(sg.saved)}）${x.uses_expiring_coupon?' ✓用上券':''}</div></div>`;
+  }).join("");
+}
+function renderQueue(s){
+  const rows=s.skill1_queue||[], el=$("#queue");
+  const pmap={}; (prev&&prev.skill1_queue||[]).forEach(r=>pmap[r.shop_id]=r);
+  if(!rows.length){ el.innerHTML=`<div class="empty">无数据</div>`; return; }
+  let h=`<table><thead><tr><th>店</th><th>前方桌数</th><th>过号速度</th><th>预计入座</th><th>券</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    if(r.error){ h+=`<tr><td colspan="5" class="err">${esc(r.error)}</td></tr>`; return; }
+    const q=r.queue_tables, pq=pmap[r.shop_id];
+    const qFlash = pq && pq.queue_tables!==q ? "flash":"";
+    const gw = r.seated_in_min!=null ? Math.min(r.seated_in_min*1.5,140) : 0;
+    h+=`<tr><td>${esc(r.name||r.shop_id)}</td>
+      <td><span class="qbar" style="width:${Math.min((q||0)*5,110)}px"></span> <b class="${qFlash}">${q??'—'}</b> 桌</td>
+      <td class="small">${r.per_table_min!=null?('约 '+r.per_table_min+' 分/位'):'<span class="mut">—</span>'}</td>
+      <td class="small">${r.seated_at?('🪑 '+r.seated_at+(r.seated_in_min!=null?` <span class="mut">(${r.seated_in_min}分)</span>`:'')):'<span class="mut">—</span>'}${gw?`<br><span class="gantt" style="width:${gw}px"></span>`:''}</td>
+      <td class="small mut">${esc(r.coupon||'—')}</td></tr>`;
+  });
+  el.innerHTML=h+`</tbody></table>`;
+}
+function renderTrip(s){
+  const it=s.skill3_itinerary, el=$("#trip");
+  $("#tripStart").textContent = it&&it.start?`（出发 ${it.start}）`:"";
+  if(!it||!it.stops||!it.stops.length){ el.innerHTML=`<div class="empty">无行程</div>`; return; }
+  const pmap={}; ((prev&&prev.skill3_itinerary&&prev.skill3_itinerary.stops)||[]).forEach(p=>pmap[p.label]=p);
+  const cards = it.stops.map(st=>{
+    const pst=pmap[st.label]; let meta;
+    if(st.error){ meta=`<span class="err">${esc(st.error)}</span>`; }
+    else if(st.kind==="cinema"){
+      const tl=st.ticket_left, fl=(pst&&pst.ticket_left!==tl)?"flash":"";
+      meta = tl==null ? '<span class="mut">—</span>'
+           : (tl>0 ? `🎫 余票 <b class="tk-ok ${fl}">${tl}</b> 张` : '🎫 <span class="tk-bad">已售罄</span>');
+    } else {
+      const q=st.queue_tables, fl=(pst&&pst.queue_tables!==q)?"flash":"";
+      meta = `🍽️ <b class="${fl}">${q??'—'}</b> 桌${st.seated_at?` · 🪑${st.seated_at}入座`:''}`;
+      if(st.coupon) meta += `<br>🎟️ <span class="tk-ok">${esc(st.coupon)}</span>`;
+    }
+    return `<div class="stop"><div class="when">${esc(st.arrive_at)}</div><div class="lbl">${esc(st.label)}</div><div class="meta">${meta}</div></div>`;
+  });
+  el.innerHTML = `<div class="trip">${cards.join('<div class="arrow">→</div>')}</div>`;
+}
+
+function renderGrocery(s){
+  const g=s.skill2_grocery, el=$("#grocery");
+  $("#grocWeather").textContent = `（天气：${controls.weather}）`;
+  if(g===undefined||g===null){ el.innerHTML=`<div class="err">采购数据缺失：沙盒 server 可能是旧进程。请 Ctrl-C 后重新运行 python3 sandbox/server.py</div>`; return; }
+  if(g.error){ el.innerHTML=`<div class="err">grocery 失败：${esc(g.error)}</div>`; return; }
+  const due=g.due||[];
+  if(!due.length){ el.innerHTML=`<div class="empty">${esc((g.notes&&g.notes[0])||'暂无到期补货')}</div>`; return; }
+  let h="";
+  due.forEach(d=>{
+    const b=d.best||{};
+    h+=`<div style="margin-bottom:10px">
+      <div class="row"><b>${esc(d.need)}</b><span class="small mut">${esc(d.reason)}</span></div>
+      <table><thead><tr><th>商家 · 规格</th><th>券后单价</th><th>券后</th><th>囤货</th></tr></thead><tbody>`;
+    const rows=[Object.assign({_best:true},b), ...(d.alternatives||[])];
+    rows.forEach(r=>{
+      h+=`<tr${r._best?' style="color:var(--ok)"':''}>
+        <td class="small">${esc(r.sku)}${r.qty>1?` ×${r.qty}`:''}</td>
+        <td><b>${esc(r.unit_price)}</b></td><td>${esc(r.payable)}</td>
+        <td class="small mut">${r._best&&d.covers_cycles?`覆盖${d.covers_cycles}周期`:''}</td></tr>`;
+    });
+    h+=`</tbody></table></div>`;
+  });
+  const c=g.cart;
+  if(c){ h+=`<div class="push" style="border-color:var(--ok);background:#13231b">
+    <div class="small mut">🛒 凑一单 · ${esc(c.merchant)}</div>
+    <div class="small">${(c.items||[]).map(i=>esc(i.sku)).join(' + ')}</div>
+    <div class="small" style="margin-top:3px">原价 ${esc(c.original)} → <span class="tk-ok">${esc(c.payable)}</span>（省 ${esc(c.saved)}）${c.addon_hint?` · 再凑 ${esc(c.addon_hint.gap)} 触发「${esc(c.addon_hint.coupon)}」`:''}</div></div>`; }
+  el.innerHTML=h;
+}
+
+async function load(){
+  const s = await api("/api/state?"+qs());
+  renderClock(s.clock, s.virtual_time);
+  renderControls();
+  renderCause(s);
+  renderQueue(s);
+  renderDeal(s);
+  renderPushes(s);
+  renderGrocery(s);
+  renderTrip(s);
+  prev = s;
+}
+
+(async ()=>{ const c=await api("/api/clock"); baseline=c.baseline||baseline; presets=c.presets||[]; renderPresets(); await loadOverrides(); await load(); })();
+</script>
+</body>
+</html>
