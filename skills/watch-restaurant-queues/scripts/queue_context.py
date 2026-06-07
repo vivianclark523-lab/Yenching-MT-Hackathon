@@ -36,7 +36,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_REPO_ROOT))
 
 from mocks.clock import virtual_now, set_virtual_time, TZ_BEIJING
-from mocks.state_machine import build_for_shop
+from mocks.state_machine import build_for_shop, BaseStateMachine
 
 # 地理能力（高德路径规划等）由共享模块 scripts/amap.py 提供，Skill 3 负责实现。
 # 待 Skill 3 的 amap.py 合入 main 后，按需接入：
@@ -240,9 +240,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     opentime = f.get("opentime_today", "10:00-22:00")
 
     # 判断是否在营业时间内
-    from mocks.state_machine import BaseStateMachine
-    dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-    is_open = dummy.is_open_at(t, opentime)
+    is_open = BaseStateMachine.is_open_at(t, opentime)
 
     if not is_open:
         _out({
@@ -310,9 +308,7 @@ def cmd_watch(args: argparse.Namespace) -> None:
             f = shop["fields"]
             opentime = f.get("opentime_today", "10:00-22:00")
 
-            from mocks.state_machine import BaseStateMachine
-            dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-            if not dummy.is_open_at(t, opentime):
+            if not BaseStateMachine.is_open_at(t, opentime):
                 continue
 
             queue = _get_queue(data, sid, t)
@@ -351,9 +347,7 @@ def cmd_take_number(args: argparse.Namespace) -> None:
     f = shop["fields"]
     opentime = f.get("opentime_today", "10:00-22:00")
 
-    from mocks.state_machine import BaseStateMachine
-    dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-    is_open = dummy.is_open_at(t, opentime)
+    is_open = BaseStateMachine.is_open_at(t, opentime)
 
     queue = _get_queue(data, args.shop_id, t) if is_open else 0
     people = int(args.people)
@@ -408,9 +402,7 @@ def cmd_quick_take(args: argparse.Namespace) -> None:
     f = shop["fields"]
     opentime = f.get("opentime_today", "10:00-22:00")
 
-    from mocks.state_machine import BaseStateMachine
-    dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-    is_open = dummy.is_open_at(t, opentime)
+    is_open = BaseStateMachine.is_open_at(t, opentime)
 
     queue = (
         _fallback_queue(args.name, t)
@@ -463,7 +455,7 @@ def cmd_auto_queue(args: argparse.Namespace) -> None:
 
     # 搜索所有符合要求的餐厅
     shops = _search_shops(data, args.keyword, args.city or "北京", args.cuisine)
-    
+
     if not shops:
         # 如果没找到，尝试 Mock 一个
         shop = _fallback_shop(args.keyword)
@@ -476,9 +468,7 @@ def cmd_auto_queue(args: argparse.Namespace) -> None:
         f = shop["fields"]
         opentime = f.get("opentime_today", "10:00-22:00")
 
-        from mocks.state_machine import BaseStateMachine
-        dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-        is_open = dummy.is_open_at(t, opentime)
+        is_open = BaseStateMachine.is_open_at(t, opentime)
 
         queue = _get_queue(data, shop_id, t) if is_open else 0
         eta = _eta_minutes(queue)
