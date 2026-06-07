@@ -447,36 +447,29 @@ class MealContext:
             "note": "用户明确指定品类时，天气和明日日程作为提醒，不做硬过滤",
         }
 
-    def grocery_replenishment(self, weather: str) -> dict[str, Any]:
-        suggestions = []
+    def grocery_due(self, weather: str) -> list[dict[str, Any]]:
+        """按周期/天气筛出"该补"的日用品需求(只负责触发+理由，用券比价交给引擎层)。"""
+        due = []
         for item in self.groceries:
-            fields = item["fields"]
-            days = int(fields.get("last_purchase_days_ago", 0))
-            cycle = int(fields.get("cycle_days", 1))
+            f = item["fields"]
+            days = int(f.get("last_purchase_days_ago", 0))
+            cycle = int(f.get("cycle_days", 1))
             remaining = cycle - days
-            trigger = remaining <= 3 or (weather == "hot" and fields.get("urgency") == "weather_hot")
+            trigger = remaining <= 3 or (weather == "hot" and f.get("urgency") == "weather_hot")
             if not trigger:
                 continue
-            reason = f"上次买了 {days} 天，按 {cycle} 天周期快用完了"
-            if weather == "hot" and fields.get("urgency") == "weather_hot":
-                reason = f"天气热，{item['name']}消耗会更快"
-            suggestions.append({
+            reason = f"上次买了 {days} 天，按 {cycle} 天周期快用完了（约还剩 {max(0, remaining)} 天）"
+            if weather == "hot" and f.get("urgency") == "weather_hot":
+                reason = f"天气热，{item['name']} 消耗更快，建议补一下"
+            due.append({
                 "item_id": item["id"],
-                "name": item["name"],
-                "category": fields.get("category"),
-                "quantity": fields.get("quantity"),
-                "price_cents": fields.get("price_cents"),
-                "price": _money(fields.get("price_cents")),
-                "coupon": fields.get("coupon"),
-                "remaining_days_estimate": remaining,
+                "need": item["name"],
+                "match": f.get("match", item["name"]),
+                "need_unit_qty": f.get("need_unit_qty"),
+                "remaining_days": remaining,
                 "reason": reason,
             })
-        return {
-            "scenario": "grocery",
-            "ok": bool(suggestions),
-            "suggestions": suggestions,
-            "order_preview_required": True,
-        }
+        return due
 
 
 def cmd_profile(args: argparse.Namespace) -> None:
@@ -512,18 +505,100 @@ def cmd_recommend(args: argparse.Namespace) -> None:
     })
 
 
+def _grocery_view(row: dict[str, Any], shop_names: dict[str, Any]) -> dict[str, Any]:
+    """采购候选行 → 对话层结构(含商家/规格/qty/券后总价/券后单价/用券)。"""
+    d0 = row["dishes"][0]
+    return {
+        "merchant": shop_names.get(d0["shop_id"], {}).get("name", d0["shop_id"]),
+        "sku": d0["name"],
+        "qty": d0["qty"],
+        "unit": row["unit"],
+        "unit_total": row["unit_total"],
+        "original": _yuan2(row["original_cents"]),
+        "payable": _yuan2(row["payable_cents"]),
+        "payable_cents": row["payable_cents"],
+        "unit_price": f"¥{row['cost_per_unit'] / 1000 / 100:.2f}/{row['unit']}",
+        "saved": _yuan2(row["saved_cents"]),
+        "coupons": [c["name"] for c in row["coupons"]],
+    }
+
+
 def cmd_grocery(args: argparse.Namespace) -> None:
+    """采购补货:周期触发 → 每个需求在美团多商家/多规格里比【券后单价】最优 → 再给"凑一单"方案。"""
     now = _resolve_time(args.virtual_time)
     ctx = MealContext()
     weather = args.weather or ctx.context.get("weather", "normal")
-    data = ctx.grocery_replenishment(weather)
+    coupons = ce.load_coupons()
+    catalog = ce.load_catalog()
+    shop_names = ctx.restaurant_by_id
+    is_member = bool(ctx.profile.get("is_member", False))
+    context = {"is_member": is_member, "ordered_shops": {o["fields"]["shop_id"] for o in ctx.orders}}
+
+    XIANGXIANG = "shop-048"  # 小象超市(美团自营,有满99减20+包邮),用于"凑一单"
+    due_items = ctx.grocery_due(weather)
+    due_out = []
+    for need in due_items:
+        skus = catalog.find_dishes(need["match"])
+        if not skus:
+            continue
+        # 候选:每个 SKU 单点 + 买2(吃第二件折扣/凑满减/比单价)
+        candidates: list[list] = []
+        for s in skus:
+            candidates.append([s])
+            candidates.append([(s, 2)])
+        res = ce.optimize(candidates, t=now, context=context, objective="unit",
+                          coupons=coupons, catalog=catalog)
+        best = _grocery_view(res["best"], shop_names)
+        # 同需求里"按券后单价"的其余方案(去掉与 best 同 SKU+qty 的)
+        alts = []
+        seen = {(best["sku"], best["qty"])}
+        for r in res["ranked"][1:]:
+            v = _grocery_view(r, shop_names)
+            if (v["sku"], v["qty"]) in seen:
+                continue
+            seen.add((v["sku"], v["qty"]))
+            alts.append(v)
+        cover = (round(best["unit_total"] / need["need_unit_qty"], 1)
+                 if need.get("need_unit_qty") else None)
+        due_out.append({
+            "need": need["need"], "reason": need["reason"],
+            "best": best, "alternatives": alts[:3],
+            "covers_cycles": cover,  # best 规格能覆盖几个周期(>1 即"囤货更划算")
+        })
+
+    # 凑一单:把各需求的"小象超市"SKU 放进同一车,凑满99减20 + 满39包邮
+    cart_skus = []
+    for need in due_items:
+        xs = [s for s in catalog.find_dishes(need["match"])
+              if catalog.dishes[s]["shop_id"] == XIANGXIANG]
+        if xs:
+            cart_skus.append(min(xs, key=lambda s: catalog.dishes[s]["price_cents"]))
+    cart = None
+    if len(cart_skus) >= 2:
+        c = ce.best_combo(cart_skus, t=now, context=context, coupons=coupons, catalog=catalog)
+        gap = c.get("threshold_gaps") or []
+        cart = {
+            "merchant": shop_names.get(XIANGXIANG, {}).get("name", XIANGXIANG),
+            "items": [{"sku": catalog.dishes[s]["name"], "price": _yuan2(catalog.dishes[s]["price_cents"])}
+                      for s in cart_skus],
+            "original": _yuan2(c["original_cents"]),
+            "payable": _yuan2(c["payable_cents"]),
+            "saved": _yuan2(c["saved_cents"]),
+            "coupons": [cp["name"] for cp in c["coupons"]],
+            "addon_hint": ({"coupon": gap[0]["coupon_name"], "gap": _yuan2(gap[0]["gap_cents"]),
+                            "unlock_saves": _yuan2(gap[0]["unlock_saves_cents"])} if gap else None),
+        }
+
     _out({
-        "ok": data.get("ok", False),
+        "ok": bool(due_out),
         "cmd": "grocery",
         "virtual_time": now.isoformat(timespec="minutes"),
         "weather": weather,
-        "need": args.need,
-        "data": data,
+        "data": {
+            "due": due_out,
+            "cart": cart,
+            "notes": [] if due_out else ["暂无到补货周期的日用品"],
+        },
     })
 
 

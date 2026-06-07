@@ -440,6 +440,13 @@
     { "id": "dish-054", "name": "幸福西饼·双人下午茶套餐", "fields": { "shop_id": "shop-045", "category": "甜点", "cuisine": "甜品", "price_cents": 3600, "tags": ["核心品类", "套餐"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": false } },
     { "id": "dish-055", "name": "鲍师傅·肉松小贝(6枚)", "fields": { "shop_id": "shop-046", "category": "甜点", "cuisine": "甜品", "price_cents": 2600, "tags": ["核心品类", "网红"], "delivery_minutes": 30, "prepared_food_risk": "low", "is_signature": true } },
     { "id": "dish-056", "name": "甜啦啦·杨枝甘露", "fields": { "shop_id": "shop-047", "category": "甜点", "cuisine": "甜品", "price_cents": 1200, "tags": ["核心品类", "低价"], "delivery_minutes": 32, "prepared_food_risk": "medium", "is_signature": false } },
+    { "id": "gsku-060", "name": "小象超市·进口猫粮 2kg", "fields": { "shop_id": "shop-048", "category": "宠物", "cuisine": "采购", "price_cents": 5800, "unit": "kg", "unit_qty": 2, "tags": ["猫粮"], "is_signature": false } },
+    { "id": "gsku-061", "name": "小象超市·进口猫粮 5kg 大包装", "fields": { "shop_id": "shop-048", "category": "宠物", "cuisine": "采购", "price_cents": 12500, "unit": "kg", "unit_qty": 5, "tags": ["猫粮", "大包装"], "is_signature": false } },
+    { "id": "gsku-062", "name": "物美·猫粮 2kg", "fields": { "shop_id": "shop-049", "category": "宠物", "cuisine": "采购", "price_cents": 5400, "unit": "kg", "unit_qty": 2, "tags": ["猫粮"], "is_signature": false } },
+    { "id": "gsku-063", "name": "邻里便利店·猫粮 2kg", "fields": { "shop_id": "shop-050", "category": "宠物", "cuisine": "采购", "price_cents": 6400, "unit": "kg", "unit_qty": 2, "tags": ["猫粮", "便利"], "is_signature": false } },
+    { "id": "gsku-064", "name": "小象超市·抽纸 18 包", "fields": { "shop_id": "shop-048", "category": "日用", "cuisine": "采购", "price_cents": 5000, "unit": "包", "unit_qty": 18, "tags": ["抽纸"], "is_signature": false } },
+    { "id": "gsku-065", "name": "物美·抽纸 18 包", "fields": { "shop_id": "shop-049", "category": "日用", "cuisine": "采购", "price_cents": 4800, "unit": "包", "unit_qty": 18, "tags": ["抽纸"], "is_signature": false } },
+    { "id": "gsku-066", "name": "小象超市·无糖气泡水 12 瓶", "fields": { "shop_id": "shop-048", "category": "饮品采购", "cuisine": "采购", "price_cents": 3600, "unit": "瓶", "unit_qty": 12, "tags": ["气泡水"], "is_signature": false } },
     {
       "id": "order-001",
       "name": "历史订单 001",
@@ -489,6 +496,8 @@
       "name": "猫粮 2kg",
       "fields": {
         "type": "grocery_cycle",
+        "match": "猫粮",
+        "need_unit_qty": 2,
         "category": "宠物",
         "last_purchase_days_ago": 25,
         "cycle_days": 28,
@@ -503,8 +512,10 @@
       "name": "抽纸 18 包",
       "fields": {
         "type": "grocery_cycle",
+        "match": "抽纸",
+        "need_unit_qty": 18,
         "category": "日用",
-        "last_purchase_days_ago": 35,
+        "last_purchase_days_ago": 38,
         "cycle_days": 40,
         "quantity": "1 箱",
         "price_cents": 4990,
@@ -517,6 +528,8 @@
       "name": "无糖气泡水",
       "fields": {
         "type": "grocery_cycle",
+        "match": "气泡水",
+        "need_unit_qty": 12,
         "category": "饮品",
         "last_purchase_days_ago": 10,
         "cycle_days": 14,
