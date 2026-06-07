@@ -404,6 +404,20 @@
       }
     },
     {
+      "id": "dish-033",
+      "name": "呷哺·单人麻辣小火锅",
+      "fields": {
+        "shop_id": "shop-008",
+        "category": "火锅",
+        "cuisine": "火锅",
+        "price_cents": 3500,
+        "tags": ["单人", "连锁", "快出餐"],
+        "delivery_minutes": 30,
+        "prepared_food_risk": "low",
+        "is_signature": false
+      }
+    },
+    {
       "id": "order-001",
       "name": "历史订单 001",
       "fields": {
