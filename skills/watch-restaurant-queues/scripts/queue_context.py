@@ -66,27 +66,6 @@ def _get_shop(data: dict, shop_id: str) -> dict | None:
     return next((s for s in data["items"] if s["id"] == shop_id), None)
 
 
-def _get_hot_shops(data: dict) -> list[dict]:
-    """返回热门餐厅推荐（有完整状态机数据的热门店）"""
-    # 优先推荐有完整 state_machine 数据的热门餐厅
-    hot_shop_ids = [
-        "shop-001",  # 海底捞·望京
-        "shop-002",  # 凑凑火锅·望京
-        "shop-012",  # 蜀大侠火锅·望京
-        "shop-003",  # 外婆家·望京 SOHO
-        "shop-020",  # 奥琦玛牛肉火锅·望京
-        "shop-018",  # 朱光玉火锅馆·三里屯
-        "shop-019",  # 湊湊·三里屯太古里
-        "shop-014",  # 渝是乎重庆火锅·国贸
-    ]
-    hot_shops = []
-    for sid in hot_shop_ids:
-        shop = _get_shop(data, sid)
-        if shop:
-            hot_shops.append(shop)
-    return hot_shops
-
-
 def _search_shops(data: dict, keyword: str, city: str = "", search_by_cuisine: bool = False) -> list[dict]:
     keyword = keyword.strip().lower()
     city = city.strip()
@@ -112,10 +91,6 @@ def _search_shops(data: dict, keyword: str, city: str = "", search_by_cuisine: b
 
         if match:
             results.append(shop)
-
-    # 如果没有找到结果，返回热门餐厅推荐
-    if not results:
-        results = _get_hot_shops(data)
 
     return results
 
@@ -406,7 +381,11 @@ def cmd_search(args: argparse.Namespace) -> None:
     search_by_cuisine = getattr(args, "cuisine", False)
 
     results = []
-    for shop in _search_shops(data, args.name, city, search_by_cuisine):
+    shops = _search_shops(data, args.name, city, search_by_cuisine)
+    if not shops and not search_by_cuisine:
+        shops = [_fallback_shop(args.name)]
+
+    for shop in shops:
         f = shop["fields"]
         results.append({
             "id": shop["id"],
@@ -416,6 +395,7 @@ def cmd_search(args: argparse.Namespace) -> None:
             "cuisine": f.get("cuisine", ""),
             "rating": f.get("rating", 0),
             "cost_per_person": f.get("cost_per_person", 0),
+            "fallback": shop["id"].startswith("mock-"),
         })
 
     _out({"candidates": results, "count": len(results)})
@@ -678,6 +658,8 @@ def cmd_auto_queue(args: argparse.Namespace) -> None:
 
     # 搜索所有符合要求的餐厅
     shops = _search_shops(data, args.keyword, args.city or "北京", args.cuisine)
+    if not shops:
+        shops = [_fallback_shop(args.keyword)]
 
     # 为每个餐厅生成取号信息
     queue_results = []
