@@ -73,6 +73,8 @@ class Coupon:
     stock: BaseStateMachine | None = None
     held_by_user: bool = False           # 用户已领取、在钱包里
     expires_at: datetime | None = None   # 持有券的过期时刻（服务找人扫描用）
+    nth: int | None = None               # 第 N 件起打折（采购「第二件半价/8折」）
+    nth_rate_bps: int | None = None      # 第 N 件起的折扣率（半价=5000、8折=8000、买一送一=0）
 
     @property
     def is_delivery(self) -> bool:
@@ -93,6 +95,8 @@ class Item:
     is_signature: bool
     rating_bps: int            # shop.rating × 100
     qty: int = 1
+    unit_qty: float = 1.0      # 规格量(2kg→2.0、18包→18)，用于采购「券后单价」
+    unit: str = ""             # 规格单位展示("kg"/"包"/"瓶")
 
     @property
     def line_cents(self) -> int:
@@ -116,6 +120,8 @@ class Catalog:
             is_signature=bool(d.get("is_signature", False)),
             rating_bps=int(round(float(d.get("rating", 0)) * 100)),
             qty=qty,
+            unit_qty=float(d.get("unit_qty", 1) or 1),
+            unit=d.get("unit", ""),
         )
 
     def menu_for_shop(self, shop_id: str) -> list[str]:
@@ -185,6 +191,8 @@ def load_coupons(path: Path = _COUPON_FILE) -> list[Coupon]:
             rate_bps=dc.get("rate_bps"),
             cap_cents=dc.get("cap_cents"),
             fixed_price_cents=dc.get("fixed_price_cents"),
+            nth=dc.get("nth"),
+            nth_rate_bps=dc.get("nth_rate_bps"),
             application_order=int(f.get("application_order", 50)),
             exclusive_group=f.get("exclusive_group"),
             conditions=f.get("conditions", {}) or {},
@@ -205,7 +213,9 @@ def load_catalog(meal_path: Path = _MEAL_FILE, rest_path: Path = _RESTAURANTS_FI
     }
     dishes: dict[str, dict[str, Any]] = {}
     for item in meal.get("items", []):
-        if not item["id"].startswith("dish-"):
+        # dish-* = 外卖菜品；gsku-* = 采购 SKU(日用品多规格)。两者都进引擎 catalog；
+        # 但 MealContext.dishes 只收 dish-*，所以采购 SKU 不会污染外卖 recommend 候选池。
+        if not (item["id"].startswith("dish-") or item["id"].startswith("gsku-")):
             continue
         f = item.get("fields", {})
         dishes[item["id"]] = {
@@ -215,6 +225,8 @@ def load_catalog(meal_path: Path = _MEAL_FILE, rest_path: Path = _RESTAURANTS_FI
             "category": f.get("category", ""),
             "is_signature": f.get("is_signature", False),
             "rating": rating_by_shop.get(f.get("shop_id"), 0),
+            "unit_qty": f.get("unit_qty", 1),
+            "unit": f.get("unit", ""),
         }
     return Catalog(dishes=dishes)
 
@@ -301,6 +313,12 @@ def coupon_reduction(coupon: Coupon, items: list[Item]) -> int:
     if coupon.discount_mode == "fixed_price":
         fp = int(coupon.fixed_price_cents or 0)
         return sum(max(0, (it.price_cents - fp)) * it.qty for it in _scope_items(coupon, items))
+    if coupon.discount_mode == "nth":
+        # 第 nth 件起按 nth_rate_bps 计价：每 nth 件里有 1 件打折（第二件半价/8折/买一送一）
+        nth = max(2, int(coupon.nth or 2))
+        rate = int(coupon.nth_rate_bps if coupon.nth_rate_bps is not None else 5000)
+        return sum((it.qty // nth) * it.price_cents * (10000 - rate) // 10000
+                   for it in _scope_items(coupon, items))
     return 0
 
 
@@ -491,7 +509,8 @@ def basket_quality(items: list[Item]) -> int:
 
 
 def _basket_signature(items: list[Item]) -> str:
-    return "+".join(sorted(it.dish_id for it in items))
+    # qty>1 加 xN 后缀，区分"同 SKU 不同数量"的候选(如抽纸买1提 vs 买2提)；qty=1 不变(不影响旧用例)
+    return "+".join(sorted(f"{it.dish_id}x{it.qty}" if it.qty > 1 else it.dish_id for it in items))
 
 
 def optimize(
@@ -532,6 +551,9 @@ def optimize(
             "rating_bps": min(it.rating_bps for it in items),  # 达标维度：篮子里最低分的店
             "quality": q,                                      # composite，仅 O2/解释用
             "unit_price_milli": (pay * 1000 // q) if q else INF,
+            "unit_total": (ut := sum(it.unit_qty * it.qty for it in items)),
+            "unit": next((it.unit for it in items if it.unit), ""),
+            "cost_per_unit": pay * 1000000 // max(1, int(round(ut * 1000))),  # 券后单价(cents/单位)×1000，整数可复现
             "qualified": min(it.rating_bps for it in items) >= rating_floor_bps,
             "coupons": combo["coupons"],
             "threshold_gaps": combo["threshold_gaps"],
@@ -543,9 +565,11 @@ def optimize(
 
     def o1_key(r): return (r["payable_cents"], len(r["coupons"]), -r["num_dishes"], r["basket_id"])
     def o2_key(r): return (r["unit_price_milli"], r["payable_cents"], r["basket_id"])
+    def ou_key(r): return (r["cost_per_unit"], r["payable_cents"], r["basket_id"])  # 采购：券后单价最优
 
     ranked_o1 = sorted(rows, key=o1_key)
     ranked_o2 = sorted(rows, key=o2_key)
+    ranked_ou = sorted(rows, key=ou_key)
     qualified = [r for r in rows if r["qualified"]]
     ranked_o3 = sorted(qualified or rows, key=o1_key)  # 达标里最便宜；无人达标则全体兜底
 
@@ -553,8 +577,9 @@ def optimize(
         "O1_min_pay": ranked_o1[0]["basket_id"],
         "O2_unit_value": ranked_o2[0]["basket_id"],
         "O3_quality_ok": ranked_o3[0]["basket_id"],
+        "OU_unit_price": ranked_ou[0]["basket_id"],
     }
-    chosen = {"O1": ranked_o1, "O2": ranked_o2, "O3": ranked_o3}.get(objective, ranked_o3)
+    chosen = {"O1": ranked_o1, "O2": ranked_o2, "O3": ranked_o3, "unit": ranked_ou}.get(objective, ranked_o3)
 
     notes: list[str] = []
     if any(not r["coupons"] for r in rows):

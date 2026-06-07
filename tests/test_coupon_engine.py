@@ -359,6 +359,50 @@ def test_x_dessert():
           str([r["shop_id"] for r in d["cheaper_but_risky"]]))
 
 
+# ── Test Y: 采购·规格单价(大包装+满减 → 券后单价最优)──────────────────
+def test_y_grocery_unit_price():
+    t = T("2026-06-07T10:00:00+08:00")
+    ctxg = {"is_member": True, "ordered_shops": {"shop-024", "shop-003", "shop-007", "shop-001"}}
+    r = ce.optimize([["gsku-060"], ["gsku-061"], ["gsku-062"], ["gsku-063"]],
+                    t=t, context=ctxg, objective="unit", coupons=COUPONS, catalog=CATALOG)
+    check("Y 猫粮券后单价最优=5kg大包装", r["best"]["basket_id"] == "gsku-061", r["best"]["basket_id"])
+    check("Y 5kg券后单价¥19.40/kg", round(r["best"]["cost_per_unit"] / 100000, 2) == 19.4,
+          str(r["best"]["cost_per_unit"]))
+
+
+# ── Test Z: 采购·nth(第二件8折,按 qty 触发)─────────────────────────────
+def test_z_grocery_nth():
+    t = T("2026-06-07T10:00:00+08:00")
+    ctxg = {"is_member": True, "ordered_shops": set()}
+    r2 = ce.best_combo([("gsku-064", 2)], t=t, context=ctxg, coupons=COUPONS, catalog=CATALOG)  # 抽纸买2提
+    check("Z 抽纸买2提用上第二件8折", any("第二件8折" in c["name"] for c in r2["coupons"]),
+          str([c["name"] for c in r2["coupons"]]))
+    r1 = ce.best_combo(["gsku-064"], t=t, context=ctxg, coupons=COUPONS, catalog=CATALOG)  # 单提
+    check("Z 单提不触发第二件8折", not any("第二件8折" in c["name"] for c in r1["coupons"]),
+          str([c["name"] for c in r1["coupons"]]))
+
+
+# ── Test AA: 采购·购物车凑满减(多件凑小象超市满99减20 + 包邮)────────────
+def test_aa_grocery_cart():
+    import io
+    import contextlib
+    import types
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "meal-grocery-assistant" / "scripts"))
+    import meal_context as mc  # noqa: E402
+    from mocks.clock import reset_virtual_time
+
+    args = types.SimpleNamespace(weather=None, need="auto", virtual_time="2026-06-07T10:00:00+08:00")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        mc.cmd_grocery(args)
+    reset_virtual_time()
+    d = json.loads(buf.getvalue())["data"]
+    needs = {n["need"] for n in d["due"]}
+    check("AA 周期触发猫粮+抽纸+气泡水", {"猫粮 2kg", "抽纸 18 包", "无糖气泡水"} <= needs, str(needs))
+    check("AA 凑一单用上满99减20", d["cart"] is not None and any("满99减20" in c for c in d["cart"]["coupons"]),
+          str(d["cart"] and d["cart"]["coupons"]))
+
+
 def main() -> None:
     tests = [test_a_stacking, test_b_addon_unlocks_shenquan, test_c_time_before_shenquan,
              test_d_stock_sold_out, test_e_reproducible, test_f_member_condition,
@@ -368,7 +412,8 @@ def main() -> None:
              test_q_expiring_coupons, test_r_scan_proactive,
              test_s_hotpot_cross_shop, test_t_kuaican_deal,
              test_u_new_customer, test_v_lightfood_quality,
-             test_w_tea_drinks, test_x_dessert]
+             test_w_tea_drinks, test_x_dessert,
+             test_y_grocery_unit_price, test_z_grocery_nth, test_aa_grocery_cart]
     for fn in tests:
         print(f"\n[{fn.__name__}]")
         fn()
