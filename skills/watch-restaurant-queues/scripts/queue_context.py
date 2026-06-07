@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-scripts/queue_context.py — Skill 1 排队状态查询 / 监控 / 取号
+skills/watch-restaurant-queues/scripts/queue_context.py — Skill 1 排队状态查询 / 监控 / 取号
 
 子命令：
   search      搜索餐厅（按店名关键词）
@@ -13,20 +13,21 @@ scripts/queue_context.py — Skill 1 排队状态查询 / 监控 / 取号
 不传则使用 mocks.clock.virtual_now()（自动读沙盒覆盖文件）。
 
 用法示例：
-  python3 scripts/queue_context.py search --name "海底捞" --city "北京"
-  python3 scripts/queue_context.py status --shop-id shop-001
-  python3 scripts/queue_context.py watch --shop-ids shop-001,shop-002 --threshold 8 --interval 5 --people 2
-  python3 scripts/queue_context.py take-number --shop-id shop-001 --people 2
+  python3 skills/watch-restaurant-queues/scripts/queue_context.py search --name "海底捞" --city "北京"
+  python3 skills/watch-restaurant-queues/scripts/queue_context.py status --shop-id shop-001
+  python3 skills/watch-restaurant-queues/scripts/queue_context.py watch --shop-ids shop-001,shop-002 --threshold 8 --interval 5 --people 2
+  python3 skills/watch-restaurant-queues/scripts/queue_context.py take-number --shop-id shop-001 --people 2
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +46,7 @@ from mocks.state_machine import build_for_shop
 
 _DATA_FILE    = _REPO_ROOT / "mocks" / "restaurants.json"
 _COUPONS_FILE = _REPO_ROOT / "mocks" / "coupons.json"
+_DEFAULT_USER_LOCATION = "116.4800,39.9960"  # 望京/美团附近 demo 默认点
 
 
 def _load_data() -> dict:
@@ -63,6 +65,47 @@ def _load_coupons() -> dict:
 
 def _get_shop(data: dict, shop_id: str) -> dict | None:
     return next((s for s in data["items"] if s["id"] == shop_id), None)
+
+
+def _search_shops(data: dict, keyword: str, city: str = "") -> list[dict]:
+    keyword = keyword.strip().lower()
+    city = city.strip()
+    results = []
+    for shop in data["items"]:
+        f = shop["fields"]
+        name = shop["name"].lower()
+        aliases = [a.lower() for a in f.get("aliases", [])]
+        area = f.get("business_area", "").lower()
+
+        if city and city not in f.get("address", "").lower() and city not in area:
+            continue
+
+        if keyword in name or any(keyword in a for a in aliases):
+            results.append(shop)
+    return results
+
+
+def _fallback_shop(name: str) -> dict:
+    display_name = name.strip() or "附近餐厅"
+    return {
+        "id": "mock-fallback",
+        "name": f"{display_name}·望京店",
+        "fields": {
+            "cuisine": "本地生活",
+            "cost_per_person": 80,
+            "rating": 4.5,
+            "location": "116.4800,39.9960",
+            "address": "北京市朝阳区望京商圈（Mock 兜底门店）",
+            "opentime_today": "10:00-24:00",
+            "business_area": "望京",
+            "aliases": [display_name],
+        },
+    }
+
+
+def _fallback_queue(name: str, t: datetime) -> int:
+    seed = sum(ord(ch) for ch in name.strip()) + t.hour * 17 + t.minute
+    return 6 + seed % 13
 
 
 def _get_coupon(data: dict, shop_id: str, t: datetime) -> str | None:
@@ -104,6 +147,34 @@ def _eta_minutes(queue_tables: int) -> int:
     return max(0, queue_tables * 8)
 
 
+def _parse_lnglat(value: str | None) -> tuple[float, float] | None:
+    try:
+        lng_s, lat_s = str(value).split(",", 1)
+        return float(lng_s), float(lat_s)
+    except Exception:
+        return None
+
+
+def _distance_m(origin: tuple[float, float] | None,
+                dest: tuple[float, float] | None) -> float:
+    if origin is None or dest is None:
+        return float("inf")
+    lng1, lat1 = map(math.radians, origin)
+    lng2, lat2 = map(math.radians, dest)
+    dlng = lng2 - lng1
+    dlat = lat2 - lat1
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng / 2) ** 2
+    return 6371000 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _suggest_departure(queue_tables: int, eta_minutes: int, t: datetime) -> str:
+    if queue_tables <= 4 or eta_minutes <= 35:
+        return "现在出发就行"
+    wait_before_leave = max(0, eta_minutes - 35)
+    suggested = t + timedelta(minutes=wait_before_leave)
+    return suggested.strftime("%H:%M 左右出发")
+
+
 # ——— 工具 ———
 
 def _out(obj: Any) -> None:
@@ -126,31 +197,20 @@ def _resolve_time(args_virtual_time: str | None) -> datetime:
 
 def cmd_search(args: argparse.Namespace) -> None:
     data = _load_data()
-    keyword = args.name.strip().lower()
     city = (args.city or "").strip()
 
     results = []
-    for shop in data["items"]:
+    for shop in _search_shops(data, args.name, city):
         f = shop["fields"]
-        name = shop["name"].lower()
-        aliases = [a.lower() for a in f.get("aliases", [])]
-        area = f.get("business_area", "").lower()
-
-        # 城市过滤（宽松：地址含关键字或不指定城市）
-        if city and city not in f.get("address", "").lower() and city not in area:
-            continue
-
-        # 名称 / alias 命中
-        if keyword in name or any(keyword in a for a in aliases):
-            results.append({
-                "id": shop["id"],
-                "name": shop["name"],
-                "address": f.get("address", ""),
-                "business_area": f.get("business_area", ""),
-                "cuisine": f.get("cuisine", ""),
-                "rating": f.get("rating", 0),
-                "cost_per_person": f.get("cost_per_person", 0),
-            })
+        results.append({
+            "id": shop["id"],
+            "name": shop["name"],
+            "address": f.get("address", ""),
+            "business_area": f.get("business_area", ""),
+            "cuisine": f.get("cuisine", ""),
+            "rating": f.get("rating", 0),
+            "cost_per_person": f.get("cost_per_person", 0),
+        })
 
     _out({"candidates": results, "count": len(results)})
 
@@ -282,19 +342,12 @@ def cmd_take_number(args: argparse.Namespace) -> None:
 
     from mocks.state_machine import BaseStateMachine
     dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-    if not dummy.is_open_at(t, opentime):
-        _out({
-            "success": False,
-            "shop_id": args.shop_id,
-            "name": shop["name"],
-            "error": "餐厅当前不在取号时段",
-            "tableNumDesc": None,
-            "queueWaitTableNum": 0,
-        })
-        return
+    is_open = dummy.is_open_at(t, opentime)
 
-    queue = _get_queue(data, args.shop_id, t)
+    queue = _get_queue(data, args.shop_id, t) if is_open else 0
     people = int(args.people)
+    if people <= 0:
+        _fatal("用餐人数必须大于 0")
 
     # Mock 取号：生成桌号（格式：<商圈首字母><号码>，如 WJ-0023）
     area_prefix = {
@@ -302,16 +355,86 @@ def cmd_take_number(args: argparse.Namespace) -> None:
     }.get(f.get("business_area", ""), "BJ")
     table_num = f"{area_prefix}-{(queue * 3 + people * 7) % 9000 + 1000:04d}"
 
+    distance = _distance_m(
+        _parse_lnglat(getattr(args, "user_location", None) or _DEFAULT_USER_LOCATION),
+        _parse_lnglat(f.get("location")),
+    )
+    eta = _eta_minutes(queue)
+
     _out({
         "success": True,
         "shop_id": args.shop_id,
         "name": shop["name"],
+        "address": f.get("address", ""),
+        "business_area": f.get("business_area", ""),
+        "distance_m": None if math.isinf(distance) else round(distance),
+        "mode": "mock",
         "tableNumDesc": table_num,
         "queueWaitTableNum": queue,
         "people": people,
-        "eta_minutes": _eta_minutes(queue),
+        "eta_minutes": eta,
         "coupon": _get_coupon(data, args.shop_id, t),
+        "suggested_departure": _suggest_departure(queue, eta, t),
         "virtual_time": t.isoformat(),
+        "is_open": is_open,
+        "note": "Mock 取号成功" if is_open else "Mock 取号成功；当前不在营业时段，后续继续按虚拟时钟追踪前方桌数",
+    })
+
+
+# ——— 子命令：quick-take ———
+
+def cmd_quick_take(args: argparse.Namespace) -> None:
+    data = _load_data()
+    t = _resolve_time(args.virtual_time)
+    people = int(args.people)
+    if people <= 0:
+        _fatal("用餐人数必须大于 0")
+
+    matches = _search_shops(data, args.name, args.city or "北京")
+    fallback = not matches
+    shop = matches[0] if matches else _fallback_shop(args.name)
+    shop_id = shop["id"]
+    f = shop["fields"]
+    opentime = f.get("opentime_today", "10:00-22:00")
+
+    from mocks.state_machine import BaseStateMachine
+    dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
+    is_open = dummy.is_open_at(t, opentime)
+
+    queue = (
+        _fallback_queue(args.name, t)
+        if fallback
+        else (_get_queue(data, shop_id, t) if is_open else 0)
+    )
+    eta = _eta_minutes(queue)
+    area_prefix = {
+        "望京": "WJ", "三里屯": "SLT", "国贸": "GM",
+    }.get(f.get("business_area", ""), "BJ")
+    table_num = f"{area_prefix}-{(queue * 3 + people * 7) % 9000 + 1000:04d}"
+    distance = _distance_m(
+        _parse_lnglat(getattr(args, "user_location", None) or _DEFAULT_USER_LOCATION),
+        _parse_lnglat(f.get("location")),
+    )
+
+    _out({
+        "success": True,
+        "shop_id": shop_id,
+        "name": shop["name"],
+        "requested_name": args.name,
+        "fallback": fallback,
+        "address": f.get("address", ""),
+        "business_area": f.get("business_area", ""),
+        "distance_m": None if math.isinf(distance) else round(distance),
+        "mode": "mock",
+        "tableNumDesc": table_num,
+        "queueWaitTableNum": queue,
+        "people": people,
+        "eta_minutes": eta,
+        "coupon": None if fallback else _get_coupon(data, shop_id, t),
+        "suggested_departure": _suggest_departure(queue, eta, t),
+        "virtual_time": t.isoformat(),
+        "is_open": is_open,
+        "note": "Mock 兜底取号成功" if fallback else ("Mock 取号成功" if is_open else "Mock 取号成功；当前不在营业时段，后续继续按虚拟时钟追踪前方桌数"),
     })
 
 
@@ -354,6 +477,15 @@ def main() -> None:
     p_take.add_argument("--shop-id", required=True, dest="shop_id")
     p_take.add_argument("--people", type=int, default=2)
     p_take.add_argument("--virtual-time", default=None, dest="virtual_time")
+    p_take.add_argument("--user-location", default=None, dest="user_location")
+
+    # quick-take
+    p_quick = sub.add_parser("quick-take", help="按店名直接取号，找不到则 Mock 兜底")
+    p_quick.add_argument("--name", required=True, help="店名关键词")
+    p_quick.add_argument("--city", default="北京", help="城市（默认北京）")
+    p_quick.add_argument("--people", type=int, default=2)
+    p_quick.add_argument("--virtual-time", default=None, dest="virtual_time")
+    p_quick.add_argument("--user-location", default=None, dest="user_location")
 
     args = parser.parse_args()
 
@@ -362,6 +494,7 @@ def main() -> None:
         "status": cmd_status,
         "watch": cmd_watch,
         "take-number": cmd_take_number,
+        "quick-take": cmd_quick_take,
     }
     dispatch[args.command](args)
 
