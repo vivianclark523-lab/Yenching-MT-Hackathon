@@ -153,8 +153,8 @@ def _get_queue(data: dict, shop_id: str, t: datetime) -> int:
 
 
 def _eta_minutes(queue_tables: int) -> int:
-    """粗略估算入座等待时间：每桌约 8 分钟翻台。"""
-    return max(0, queue_tables * 8)
+    """粗略估算入座等待时间：每桌约 5 分钟翻台，封顶 110 分钟。"""
+    return max(0, min(queue_tables * 5, 110))
 
 
 def _parse_lnglat(value: str | None) -> tuple[float, float] | None:
