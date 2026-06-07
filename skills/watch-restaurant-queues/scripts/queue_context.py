@@ -31,8 +31,16 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-# ——— 路径设置：支持从仓库根目录任意子目录运行 ———
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+# ——— 路径设置：向上找含共享 mocks/ 的目录（仓库里=仓库根；部署成自包含包后=包根）。
+# 替掉脆的 parent.parent.parent.parent —— 部署后层级会变（mocks/ vendor 进包内），
+# 固定层级会解析到 workspace/ 导致 `No module named 'mocks.clock'`。与 business_context.py 同口径。
+def _find_shared_root(start: Path) -> Path:
+    for d in (start, *start.parents):
+        if (d / "mocks" / "clock.py").is_file():
+            return d
+    return start.parents[0]
+
+_REPO_ROOT = _find_shared_root(Path(__file__).resolve().parent)
 sys.path.insert(0, str(_REPO_ROOT))
 
 from mocks.clock import virtual_now, set_virtual_time, TZ_BEIJING
