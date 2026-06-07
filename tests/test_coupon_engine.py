@@ -162,9 +162,11 @@ def test_m_cmd_deal_integration():
                                  rating_floor=4.2, member=True,
                                  virtual_time="2026-06-07T12:05:00+08:00")
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        mc.cmd_deal(args)
-    reset_virtual_time()
+    try:
+        with contextlib.redirect_stdout(buf):
+            mc.cmd_deal(args)
+    finally:
+        reset_virtual_time()  # 确保虚拟时钟必复位，即使 cmd 抛异常也不残留
     out = json.loads(buf.getvalue())
     d = out["data"]
     check("M deal ok", out["ok"] is True, str(out.get("ok")))
@@ -232,9 +234,11 @@ def test_r_scan_proactive():
 
     args = types.SimpleNamespace(within_minutes=180, member=True, virtual_time="2026-06-07T21:30:00+08:00")
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        mc.cmd_scan(args)
-    reset_virtual_time()
+    try:
+        with contextlib.redirect_stdout(buf):
+            mc.cmd_scan(args)
+    finally:
+        reset_virtual_time()
     out = json.loads(buf.getvalue())
     check("R scan 产出 1 条推送", len(out["pushes"]) == 1, str(len(out["pushes"])))
     p = out["pushes"][0]
@@ -268,9 +272,11 @@ def test_t_kuaican_deal():
     args = types.SimpleNamespace(want="快餐", objective="O3", budget_yuan=None,
                                  rating_floor=4.2, member=True, virtual_time="2026-06-07T12:30:00+08:00")
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        mc.cmd_deal(args)
-    reset_virtual_time()
+    try:
+        with contextlib.redirect_stdout(buf):
+            mc.cmd_deal(args)
+    finally:
+        reset_virtual_time()  # 确保虚拟时钟必复位，即使 cmd 抛异常也不残留
     d = json.loads(buf.getvalue())["data"]
     shops = {c["shop_id"] for c in d["comparison"]}
     check("T 快餐比价覆盖5家店", len(shops) == 5, str(sorted(shops)))
@@ -302,9 +308,11 @@ def test_v_lightfood_quality():
     args = types.SimpleNamespace(want="轻食", objective="O3", budget_yuan=None,
                                  rating_floor=4.2, member=True, virtual_time="2026-06-07T12:30:00+08:00")
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        mc.cmd_deal(args)
-    reset_virtual_time()
+    try:
+        with contextlib.redirect_stdout(buf):
+            mc.cmd_deal(args)
+    finally:
+        reset_virtual_time()  # 确保虚拟时钟必复位，即使 cmd 抛异常也不残留
     d = json.loads(buf.getvalue())["data"]
     check("V 轻食默认不是最便宜的4.1店(品质优选)", d["default"]["shop_id"] != "shop-041", d["default"]["shop_id"])
     check("V 沙拉日记(4.1)被 surface 为更便宜踩雷",
@@ -327,9 +335,11 @@ def test_w_tea_drinks():
     args = types.SimpleNamespace(want="茶饮", objective="O3", budget_yuan=None,
                                  rating_floor=4.2, member=True, virtual_time="2026-06-07T15:00:00+08:00")
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        mc.cmd_deal(args)
-    reset_virtual_time()
+    try:
+        with contextlib.redirect_stdout(buf):
+            mc.cmd_deal(args)
+    finally:
+        reset_virtual_time()  # 确保虚拟时钟必复位，即使 cmd 抛异常也不残留
     d = json.loads(buf.getvalue())["data"]
     check("W 奶茶比价覆盖3家", len({c["shop_id"] for c in d["comparison"]}) == 3, str(len(d["comparison"])))
     check("W 蜜雪(4.0)被 surface 踩雷",
@@ -349,9 +359,11 @@ def test_x_dessert():
     args = types.SimpleNamespace(want="甜点", objective="O3", budget_yuan=None,
                                  rating_floor=4.2, member=True, virtual_time="2026-06-07T15:00:00+08:00")
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        mc.cmd_deal(args)
-    reset_virtual_time()
+    try:
+        with contextlib.redirect_stdout(buf):
+            mc.cmd_deal(args)
+    finally:
+        reset_virtual_time()  # 确保虚拟时钟必复位，即使 cmd 抛异常也不残留
     d = json.loads(buf.getvalue())["data"]
     check("X 甜点默认幸福西饼(达标最便宜)", d["default"]["shop_id"] == "shop-045", d["default"]["shop_id"])
     check("X 甜啦啦(4.0)被 surface 踩雷",
@@ -393,14 +405,26 @@ def test_aa_grocery_cart():
 
     args = types.SimpleNamespace(weather=None, need="auto", virtual_time="2026-06-07T10:00:00+08:00")
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        mc.cmd_grocery(args)
-    reset_virtual_time()
+    try:
+        with contextlib.redirect_stdout(buf):
+            mc.cmd_grocery(args)
+    finally:
+        reset_virtual_time()
     d = json.loads(buf.getvalue())["data"]
     needs = {n["need"] for n in d["due"]}
     check("AA 周期触发猫粮+抽纸+气泡水", {"猫粮 2kg", "抽纸 18 包", "无糖气泡水"} <= needs, str(needs))
     check("AA 凑一单用上满99减20", d["cart"] is not None and any("满99减20" in c for c in d["cart"]["coupons"]),
           str(d["cart"] and d["cart"]["coupons"]))
+
+
+# ── Test AB: 采购·满39包邮真的把配送费减到 0(回应 review:验证 delivery_fee 生效)──
+def test_ab_grocery_free_delivery():
+    t = T("2026-06-07T10:00:00+08:00")
+    ctxg = {"is_member": True, "ordered_shops": set()}
+    r = ce.best_combo(["gsku-060"], t=t, context=ctxg, coupons=COUPONS, catalog=CATALOG)  # 小象猫粮2kg ¥58≥39
+    check("AB 用上了满39包邮券", any("包邮" in c["name"] for c in r["coupons"]), str([c["name"] for c in r["coupons"]]))
+    check("AB 配送费实际被减到 0", r["delivery_fee_cents"] - r["delivery_reduction_cents"] == 0,
+          f"deliv={r['delivery_fee_cents']} cut={r['delivery_reduction_cents']}")
 
 
 def main() -> None:
@@ -413,7 +437,8 @@ def main() -> None:
              test_s_hotpot_cross_shop, test_t_kuaican_deal,
              test_u_new_customer, test_v_lightfood_quality,
              test_w_tea_drinks, test_x_dessert,
-             test_y_grocery_unit_price, test_z_grocery_nth, test_aa_grocery_cart]
+             test_y_grocery_unit_price, test_z_grocery_nth, test_aa_grocery_cart,
+             test_ab_grocery_free_delivery]
     for fn in tests:
         print(f"\n[{fn.__name__}]")
         fn()

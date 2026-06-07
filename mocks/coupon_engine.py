@@ -315,6 +315,9 @@ def coupon_reduction(coupon: Coupon, items: list[Item]) -> int:
         return sum(max(0, (it.price_cents - fp)) * it.qty for it in _scope_items(coupon, items))
     if coupon.discount_mode == "nth":
         # 第 nth 件起按 nth_rate_bps 计价：每 nth 件里有 1 件打折（第二件半价/8折/买一送一）
+        # TODO(v2): scope=category 命中多个不同价 SKU 时，目前按各 SKU 独立整除，
+        #   未做「优先折扣高价件」的跨 SKU 最优分配（极边缘场景非最优）。
+        #   当前数据里 nth 券都是 scope=sku（单 SKU），不受影响。
         nth = max(2, int(coupon.nth or 2))
         rate = int(coupon.nth_rate_bps if coupon.nth_rate_bps is not None else 5000)
         return sum((it.qty // nth) * it.price_cents * (10000 - rate) // 10000
