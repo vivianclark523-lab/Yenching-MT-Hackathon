@@ -54,20 +54,23 @@ DEMO_BASELINE = "2026-06-07T18:00:00+08:00"
 DEMO_QUEUE_SHOPS = ["shop-001", "shop-024", "shop-012"]
 
 # Skill 3 demo 行程预设：每个 = 一条可在面板里切换的行程（评委用「选预设」下拉切换）。
-# 从"出发=当前虚拟时钟"起，按 leg(路程)+dwell(停留) 累计推每站到达时刻，
-# 每站在它自己的到达时刻查 business_context（排队/券/余票）。poi 直接用 shop_id（便于复用排队速度表）。
+# 每站有固定的计划时刻 at（当天 HH:MM）—— 行程是"今晚/今天的计划"，时刻不随虚拟时钟漂移
+# （否则会出现"中午吃晚饭"的反常识）。虚拟时钟代表"现在"：
+#   - 餐饮排队：在该站的计划到店时刻 at 求值（这是"到店预计排队/入座"的预测）；
+#   - 电影余票：在当前时钟求值（票是现在订的，演余票递减 / 手慢无）。
+# poi 直接用 shop_id（便于复用排队速度表）。
 ITINERARY_PRESETS = [
     {"key": "evening", "label": "🍲 今晚·火锅+电影+宵夜", "stops": [
-        {"label": "🍲 晚饭 · 海底捞·望京", "poi": "shop-001", "kind": "dining", "leg": 0, "dwell": 75},
-        {"label": "🎬 电影 · 嘉禾望京影院", "poi": "cinema-001", "kind": "cinema", "leg": 15, "dwell": 130},
-        {"label": "🌙 宵夜 · 叫了个炸鸡", "poi": "shop-031", "kind": "dining", "leg": 15, "dwell": 45},
+        {"label": "🍲 晚饭 · 海底捞·望京", "poi": "shop-001", "kind": "dining", "at": "18:30"},
+        {"label": "🎬 电影 · 嘉禾望京影院", "poi": "cinema-001", "kind": "cinema", "at": "20:10"},
+        {"label": "🌙 宵夜 · 叫了个炸鸡", "poi": "shop-031", "kind": "dining", "at": "22:30"},
     ]},
     {"key": "lunch-pork", "label": "🍛 午间·猪脚饭+下午场电影", "stops": [
-        {"label": "🍛 午饭 · 隆江猪脚饭·望京", "poi": "shop-028", "kind": "dining", "leg": 0, "dwell": 40},
-        {"label": "🎬 下午场 · 嘉禾望京影院", "poi": "cinema-001", "kind": "cinema", "leg": 12, "dwell": 120},
+        {"label": "🍛 午饭 · 隆江猪脚饭·望京", "poi": "shop-028", "kind": "dining", "at": "12:15"},
+        {"label": "🎬 下午场 · 嘉禾望京影院", "poi": "cinema-001", "kind": "cinema", "at": "14:00"},
     ]},
     {"key": "quick", "label": "🔥 简版·火锅一站", "stops": [
-        {"label": "🍲 晚饭 · 海底捞·望京", "poi": "shop-001", "kind": "dining", "leg": 0, "dwell": 75},
+        {"label": "🍲 晚饭 · 海底捞·望京", "poi": "shop-001", "kind": "dining", "at": "18:30"},
     ]},
 ]
 DEMO_ITINERARY = ITINERARY_PRESETS[0]["stops"]   # 向后兼容：默认行程 = 第一个预设
@@ -217,15 +220,15 @@ def build_itinerary(start_iso: str, rates: dict[str, float],
                     plan: list[dict] | None = None, label: str = "") -> dict:
     plan = plan if plan is not None else DEMO_ITINERARY
     try:
-        start = datetime.fromisoformat(start_iso)
+        now = datetime.fromisoformat(start_iso)
     except Exception:
-        start = datetime.now(TZ_BEIJING)
+        now = datetime.now(TZ_BEIJING)
     stops = []
-    cursor = 0
     for s in plan:
-        cursor += s["leg"]
-        arrive = start + timedelta(minutes=cursor)
-        # 餐厅排队：在"到达时刻"求值（到店才排队）；电影票：在"当前时刻"求值（票是现在订的，演余票递减/手慢无）
+        # 每站的固定计划时刻 at（当天 HH:MM）→ 绝对时间，不随时钟漂移（行程是"计划"）
+        hh, mm = (int(x) for x in s["at"].split(":"))
+        arrive = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        # 餐饮排队：在该站"计划到店时刻"求值（到店预测）；电影票：在"当前时刻"求值（票是现在订的，演余票递减/手慢无）
         eval_time = start_iso if s["kind"] == "cinema" else arrive.isoformat()
         bc = _run_skill(BIZ_CTX, ["--poi", s["poi"], "--virtual-time", eval_time])
         data = bc.get("data", {}) if isinstance(bc, dict) and bc.get("ok") else {}
@@ -244,9 +247,10 @@ def build_itinerary(start_iso: str, rates: dict[str, float],
             mins = round(q / rate)
             stop["seated_in_min"] = mins
             stop["seated_at"] = (arrive + timedelta(minutes=mins)).strftime("%H:%M")
-        cursor += s["dwell"]
         stops.append(stop)
-    return {"start": start.strftime("%H:%M"), "label": label, "stops": stops}
+    # 行程"开始"= 第一站的计划时刻
+    return {"start": stops[0]["arrive_at"] if stops else now.strftime("%H:%M"),
+            "label": label, "stops": stops}
 
 
 # ---------- 聚合各 Skill 在当前虚拟时刻 + 当前控件设定下的状态 ----------
