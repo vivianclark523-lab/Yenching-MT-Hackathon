@@ -33,7 +33,27 @@ jobs:
         uses: pre-commit/action@v3.0.1
 
   # ---------------------------------------------------------------------------
-  # Job 2: openclaw/ 是 vendored 上游代码，理论上不应该改。
+  # Job 2: 跑券引擎单测（68 断言 / 28 测试用例，退出码即结果）
+  # ---------------------------------------------------------------------------
+  coupon-engine-tests:
+    name: Coupon engine tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run coupon engine tests
+        run: |
+          result=$(python3 tests/test_coupon_engine.py 2>&1)
+          echo "$result"
+          echo "$result" | tail -2 | grep -q "ALL PASS" && exit 0 || exit 1
+        working-directory: ${{ github.workspace }}
+
+  # ---------------------------------------------------------------------------
+  # Job 3: openclaw/ 是 vendored 上游代码，理论上不应该改。
   # 如果 PR 改了它，发个警告评论（不阻断），让 reviewer 注意。
   # ---------------------------------------------------------------------------
   warn-on-openclaw-changes:
