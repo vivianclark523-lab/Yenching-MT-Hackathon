@@ -19,10 +19,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+def _find_shared_root(start: Path) -> Path:
+    """从 start 向上找含共享 mocks/ 包的目录，作为依赖根。
+    - dev 仓库里运行 → 找到仓库根（mocks/ 是 skills/ 的兄弟目录）
+    - 部署成自包含 skill 包后运行 → 找到包根（mocks/ 已 vendor 进来）
+    同一份代码在两处都跑，替掉脆的 parents[N]（部署后层级会变）。详见 docs。"""
+    for d in (start, *start.parents):
+        if (d / "mocks" / "clock.py").is_file():
+            return d
+    return start.parents[0]
+
+
+REPO_ROOT = _find_shared_root(Path(__file__).resolve().parent)
 sys.path.insert(0, str(REPO_ROOT))
 
 from mocks.clock import set_virtual_time, virtual_now  # noqa: E402
+from mocks import coupon_engine as ce  # noqa: E402
 
 MOCKS_DIR = REPO_ROOT / "mocks"
 MEAL_FILE = MOCKS_DIR / "meal_grocery.json"
@@ -515,6 +527,228 @@ def cmd_grocery(args: argparse.Namespace) -> None:
     })
 
 
+# ───────────────────────── Skill 2 · 跨店用券比价（deal）─────────────────────────
+
+def _yuan2(cents: int) -> str:
+    return f"¥{cents / 100:.2f}"
+
+
+def _deal_candidates(
+    want: str,
+    now: datetime,
+    context: dict[str, Any],
+    coupons: list,
+    catalog: Any,
+) -> list[list[str]]:
+    """意图层：把“想吃 <want>”展开成有界候选篮子集合（自由度全在这层、且有界）。
+    - 每家匹配店：各匹配菜 = 单点/套餐候选
+    - 再对该店最便宜匹配菜按“门槛缺口”枚举凑单候选（addon qty 恒为 +1）
+    引擎只对“给定篮子”求最优，不自己加菜/调 qty。"""
+    matches = catalog.find_dishes(want)
+    by_shop: dict[str, list[str]] = {}
+    for did in matches:
+        by_shop.setdefault(catalog.dishes[did]["shop_id"], []).append(did)
+
+    baskets: list[list[str]] = []
+    for shop_id, dish_ids in by_shop.items():
+        for did in dish_ids:
+            baskets.append([did])  # 单点 / 套餐 各成一个候选
+        cheapest = min(dish_ids, key=lambda d: catalog.dishes[d]["price_cents"])
+        bc = ce.best_combo([cheapest], t=now, context=context, coupons=coupons, catalog=catalog)
+        addon_pool = [m for m in catalog.menu_for_shop(shop_id) if m not in dish_ids]
+        for gap in bc.get("threshold_gaps", [])[:2]:
+            ranked_addons = sorted(
+                (m for m in addon_pool if catalog.dishes[m]["price_cents"] >= gap["gap_cents"]),
+                key=lambda m: (catalog.dishes[m]["price_cents"] - gap["gap_cents"],
+                               catalog.dishes[m]["price_cents"], m),
+            )
+            for a in ranked_addons[:1]:
+                baskets.append([cheapest, a])  # 凑单候选：核心菜 + 一件凑过门槛
+
+    seen: set = set()
+    uniq: list[list[str]] = []
+    for b in baskets:
+        key = tuple(sorted(b))
+        if key not in seen:
+            seen.add(key)
+            uniq.append(b)
+    return uniq
+
+
+def _row_view(row: dict[str, Any], shop_names: dict[str, Any]) -> dict[str, Any]:
+    """把 optimize 的一行候选整理成对话层易渲染的结构（店名/呈现/券后/凑单提示）。"""
+    dishes = row["dishes"]
+    shop_id = dishes[0]["shop_id"]
+    addon_hint = None
+    if row.get("threshold_gaps"):
+        g = row["threshold_gaps"][0]
+        addon_hint = {"coupon": g["coupon_name"], "gap": _yuan2(g["gap_cents"]),
+                      "unlock_saves": _yuan2(g["unlock_saves_cents"])}
+    return {
+        "shop_id": shop_id,
+        "shop_name": shop_names.get(shop_id, {}).get("name", shop_id),
+        "presentation": "+".join(d["name"] for d in dishes),
+        "is_combo": len(dishes) > 1,
+        "rating": round(row["rating_bps"] / 100, 1),
+        "qualified": row["qualified"],
+        "original": _yuan2(row["original_cents"]),
+        "payable": _yuan2(row["payable_cents"]),
+        "payable_cents": row["payable_cents"],
+        "saved": _yuan2(row["saved_cents"]),
+        "coupons": [c["name"] for c in row["coupons"]],
+        "addon_hint": addon_hint,
+    }
+
+
+def _wait_view(ta: dict[str, Any]) -> dict[str, Any] | None:
+    """把 time_advice 压成对话层易渲染的时间杠杆提示。"""
+    if ta["wait_suggested"]:
+        bf = ta["best_future"]
+        return {"action": "wait", "until": bf["at"], "wait_minutes": bf["wait_minutes"],
+                "payable": _yuan2(bf["payable_cents"]), "save": _yuan2(bf["save_cents"])}
+    if ta["order_now_before"]:
+        on = ta["order_now_before"]
+        return {"action": "order_now", "before": on["at"], "wait_minutes": on["wait_minutes"],
+                "note": "该时点后券将失效/秒空、会变贵"}
+    return None
+
+
+def cmd_deal(args: argparse.Namespace) -> None:
+    now = _resolve_time(args.virtual_time)
+    coupons = ce.load_coupons()
+    catalog = ce.load_catalog()
+
+    # 会员身份来自 USER 画像层（meal_grocery profile），不在引擎层读
+    meal_ctx = MealContext()
+    shop_names = meal_ctx.restaurant_by_id
+    is_member = bool(meal_ctx.profile.get("is_member", False)) if args.member is None else args.member
+    ordered_shops = {o["fields"]["shop_id"] for o in meal_ctx.orders}  # 用户有历史的店 → 新客券判定
+    context = {"is_member": is_member, "ordered_shops": ordered_shops}
+
+    candidates = _deal_candidates(args.want, now, context, coupons, catalog)
+    if not candidates:
+        _out({"ok": False, "cmd": "deal", "want": args.want,
+              "data": {"reason": f"没找到“{args.want}”相关的店或菜"}})
+        return
+
+    floor_bps = int(round(args.rating_floor * 100))
+    res = ce.optimize(candidates, t=now, context=context, objective=args.objective,
+                      rating_floor_bps=floor_bps, coupons=coupons, catalog=catalog)
+    rows = res["rows"]  # 全部候选（按券后价排序，含 qualified 标记）
+
+    # 每家店“最优呈现”：券后最低，平价则更多食材（原价更高）
+    per_shop: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        sid = r["dishes"][0]["shop_id"]
+        cur = per_shop.get(sid)
+        rk = (r["payable_cents"], -r["original_cents"])
+        if cur is None or rk < (cur["payable_cents"], -cur["original_cents"]):
+            per_shop[sid] = r
+    def _advise(row: dict[str, Any]) -> dict[str, Any] | None:
+        basket = [d["dish_id"] for d in row["dishes"]]
+        return _wait_view(ce.time_advice(basket, now, context=context, coupons=coupons, catalog=catalog))
+
+    comparison = []
+    for r in sorted(per_shop.values(), key=lambda x: x["payable_cents"]):
+        v = _row_view(r, shop_names)
+        v["wait"] = _advise(r)
+        comparison.append(v)
+
+    # 默认推荐（O3：达标里最便宜）；带预算时取“达标且预算内最便宜”
+    best_row = res["best"]
+    budget_cents = int(args.budget_yuan * 100) if args.budget_yuan is not None else None
+    if budget_cents is not None and best_row["payable_cents"] > budget_cents:
+        within = [r for r in rows if r["qualified"] and r["payable_cents"] <= budget_cents]
+        best_row = within[0] if within else best_row
+    default = _row_view(best_row, shop_names)
+    default["wait"] = _advise(best_row)
+
+    # 诚实 surfacing：比默认更便宜但未达标（踩雷）的选项
+    cheaper_risky = [_row_view(r, shop_names) for r in rows
+                     if not r["qualified"] and r["payable_cents"] < best_row["payable_cents"]]
+    # 品质升级位：达标里比默认评分更高的最便宜替代（“多花 ¥X 更稳”）
+    upsell = next((_row_view(r, shop_names) for r in rows
+                   if r["qualified"] and r["rating_bps"] > best_row["rating_bps"]), None)
+
+    _out({
+        "ok": True,
+        "cmd": "deal",
+        "virtual_time": now.isoformat(timespec="minutes"),
+        "want": args.want,
+        "objective": args.objective,
+        "rating_floor": args.rating_floor,
+        "is_member": is_member,
+        "data": {
+            "default": default,
+            "comparison": comparison,
+            "cheaper_but_risky": cheaper_risky,
+            "quality_upsell": upsell,
+            "notes": res["notes"],
+        },
+    })
+
+
+# ───────────────────────── Skill 2 · 服务找人：临期券扫描（scan）─────────────────────────
+
+def _scan_pick_for_coupon(coupon: Any, now: datetime, context: dict[str, Any],
+                          coupons: list, catalog: Any) -> dict[str, Any] | None:
+    """对一张临期券，生成“用掉它”的候选（招牌主菜 + 凑单到门槛），
+    返回最便宜且确实用上该券的方案行。"""
+    shop = coupon.shop_id
+    menu = catalog.menu_for_shop(shop) if shop else []
+    if not menu:
+        return None
+    sig = [d for d in menu if catalog.dishes[d]["is_signature"]]
+    primary = max(sig or menu, key=lambda d: catalog.dishes[d]["price_cents"])
+    candidates = [[primary]]
+    if coupon.min_amount:  # 凑单到该券门槛
+        gap = coupon.min_amount - catalog.dishes[primary]["price_cents"]
+        addons = sorted(
+            (m for m in menu if m != primary and catalog.dishes[m]["price_cents"] >= gap),
+            key=lambda m: (catalog.dishes[m]["price_cents"] - max(gap, 0),
+                           catalog.dishes[m]["price_cents"], m),
+        )
+        if addons:
+            candidates.append([primary, addons[0]])
+    res = ce.optimize(candidates, t=now, context=context, coupons=coupons, catalog=catalog)
+    using = [r for r in res["rows"] if any(cp["id"] == coupon.id for cp in r["coupons"])]
+    return using[0] if using else (res["rows"][0] if res["rows"] else None)
+
+
+def cmd_scan(args: argparse.Namespace) -> None:
+    now = _resolve_time(args.virtual_time)
+    coupons = ce.load_coupons()
+    catalog = ce.load_catalog()
+    meal_ctx = MealContext()
+    shop_names = meal_ctx.restaurant_by_id
+    is_member = bool(meal_ctx.profile.get("is_member", False)) if args.member is None else args.member
+    ordered_shops = {o["fields"]["shop_id"] for o in meal_ctx.orders}  # 用户有历史的店 → 新客券判定
+    context = {"is_member": is_member, "ordered_shops": ordered_shops}
+
+    pushes = []
+    for c in ce.expiring_coupons(now, within_minutes=args.within_minutes, coupons=coupons):
+        pick = _scan_pick_for_coupon(c, now, context, coupons, catalog)
+        if pick is None:
+            continue
+        pushes.append({
+            "trigger": "coupon_expiring",
+            "coupon": {"name": c.name, "description": c.description,
+                       "expires_at": c.expires_at.isoformat(timespec="minutes")},
+            "shop_name": shop_names.get(c.shop_id, {}).get("name", c.shop_id),
+            "uses_expiring_coupon": any(cp["id"] == c.id for cp in pick["coupons"]),
+            "suggestion": _row_view(pick, shop_names),
+        })
+
+    _out({
+        "ok": True,
+        "cmd": "scan",
+        "virtual_time": now.isoformat(timespec="minutes"),
+        "within_minutes": args.within_minutes,
+        "pushes": pushes,
+        "notes": [] if pushes else ["当前窗口内没有临期券，不主动打扰"],
+    })
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="meal_context.py",
@@ -555,6 +789,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_grocery.add_argument("--virtual-time", default=None, dest="virtual_time")
     p_grocery.set_defaults(func=cmd_grocery)
+
+    p_deal = sub.add_parser("deal", help="跨店同品类用券比价（券后最优）")
+    p_deal.add_argument("--want", required=True, help="核心品类/菜名，如 猪脚饭")
+    p_deal.add_argument("--objective", choices=["O1", "O2", "O3"], default="O3",
+                        help="O1 最低实付 / O2 单位品质价 / O3(默认) 品质达标前提下最低")
+    p_deal.add_argument("--budget-yuan", type=int, default=None, dest="budget_yuan")
+    p_deal.add_argument("--rating-floor", type=float, default=4.2, dest="rating_floor",
+                        help="达标线，默认 4.2（复用极忙场景不踩雷口径）")
+    p_deal.add_argument("--member", dest="member", action="store_const", const=True, default=None)
+    p_deal.add_argument("--no-member", dest="member", action="store_const", const=False)
+    p_deal.add_argument("--virtual-time", default=None, dest="virtual_time")
+    p_deal.set_defaults(func=cmd_deal)
+
+    p_scan = sub.add_parser("scan", help="服务找人：扫描临期券，给“用掉它的最优凑单”主动推送")
+    p_scan.add_argument("--within-minutes", type=int, default=180, dest="within_minutes",
+                        help="临期窗口，默认 180 分钟内过期的券")
+    p_scan.add_argument("--member", dest="member", action="store_const", const=True, default=None)
+    p_scan.add_argument("--no-member", dest="member", action="store_const", const=False)
+    p_scan.add_argument("--virtual-time", default=None, dest="virtual_time")
+    p_scan.set_defaults(func=cmd_scan)
 
     return parser
 

@@ -510,6 +510,146 @@
           "京门"
         ]
       }
+    },
+    {
+      "id": "shop-028",
+      "name": "隆江猪脚饭·望京店",
+      "fields": {
+        "cuisine": "猪脚饭",
+        "cost_per_person": 30,
+        "rating": 4.6,
+        "location": "116.4668,39.9962",
+        "address": "北京市朝阳区望京街道望京西路 28 号底商",
+        "opentime_today": "09:00-22:00",
+        "tel": "010-84756028",
+        "business_area": "望京",
+        "aliases": ["隆江猪脚饭", "隆江", "猪脚饭望京"]
+      }
+    },
+    {
+      "id": "shop-029",
+      "name": "阿婆牌猪脚饭·望京 SOHO 店",
+      "fields": {
+        "cuisine": "猪脚饭",
+        "cost_per_person": 28,
+        "rating": 4.3,
+        "location": "116.4781,39.9882",
+        "address": "北京市朝阳区望京街道望京 SOHO T3 B1",
+        "opentime_today": "10:00-21:30",
+        "tel": "010-84756029",
+        "business_area": "望京",
+        "aliases": ["阿婆牌猪脚饭", "阿婆猪脚饭", "阿婆牌"]
+      }
+    },
+    {
+      "id": "shop-030",
+      "name": "潮味轩猪脚饭·望京悠乐汇",
+      "fields": {
+        "cuisine": "猪脚饭",
+        "cost_per_person": 26,
+        "rating": 4.1,
+        "location": "116.4699,39.9941",
+        "address": "北京市朝阳区望京街道望京悠乐汇 B1 美食广场",
+        "opentime_today": "10:00-22:00",
+        "tel": "010-84756030",
+        "business_area": "望京",
+        "aliases": ["潮味轩", "潮味轩猪脚饭"]
+      }
+    },
+    {
+      "id": "shop-031",
+      "name": "叫了个炸鸡·望京夜宵店",
+      "fields": {
+        "cuisine": "炸鸡",
+        "cost_per_person": 45,
+        "rating": 4.5,
+        "location": "116.4707,39.9951",
+        "address": "北京市朝阳区望京街道望京 SOHO T1 B1 夜宵档",
+        "opentime_today": "11:00-02:00",
+        "tel": "010-84756031",
+        "business_area": "望京",
+        "aliases": ["叫了个炸鸡", "炸鸡", "炸鸡望京"]
+      }
+    },
+    {
+      "id": "shop-032",
+      "name": "杨国福麻辣烫·望京店",
+      "fields": { "cuisine": "麻辣烫", "cost_per_person": 38, "rating": 4.5, "location": "116.4691,39.9955", "address": "北京市朝阳区望京街道望京 SOHO T2 B1", "opentime_today": "10:00-22:00", "tel": "010-84756032", "business_area": "望京", "aliases": ["杨国福", "杨国福麻辣烫"] }
+    },
+    {
+      "id": "shop-033",
+      "name": "张亮麻辣烫·望京悠乐汇",
+      "fields": { "cuisine": "麻辣烫", "cost_per_person": 30, "rating": 4.0, "location": "116.4685,39.9939", "address": "北京市朝阳区望京街道望京悠乐汇 B1 档口", "opentime_today": "10:00-22:00", "tel": "010-84756033", "business_area": "望京", "aliases": ["张亮", "张亮麻辣烫"] }
+    },
+    {
+      "id": "shop-034",
+      "name": "和府捞面·望京店",
+      "fields": { "cuisine": "面食", "cost_per_person": 48, "rating": 4.6, "location": "116.4703,39.9967", "address": "北京市朝阳区望京街道望京 SOHO T1 2F", "opentime_today": "10:00-22:00", "tel": "010-84756034", "business_area": "望京", "aliases": ["和府", "和府捞面"] }
+    },
+    {
+      "id": "shop-035",
+      "name": "味千拉面·望京店",
+      "fields": { "cuisine": "面食", "cost_per_person": 42, "rating": 4.3, "location": "116.4677,39.9948", "address": "北京市朝阳区望京街道望京悠乐汇 2F", "opentime_today": "10:00-22:00", "tel": "010-84756035", "business_area": "望京", "aliases": ["味千", "味千拉面"] }
+    },
+    {
+      "id": "shop-036",
+      "name": "湘当有味·家常小炒·望京",
+      "fields": { "cuisine": "家常小炒", "cost_per_person": 42, "rating": 4.5, "location": "116.4712,39.9952", "address": "北京市朝阳区望京街道望京西路 30 号底商", "opentime_today": "10:00-21:30", "tel": "010-84756036", "business_area": "望京", "aliases": ["湘当有味", "家常小炒望京"] }
+    },
+    {
+      "id": "shop-037",
+      "name": "川味小炒·望京店",
+      "fields": { "cuisine": "家常小炒", "cost_per_person": 35, "rating": 4.3, "location": "116.4669,39.9943", "address": "北京市朝阳区望京街道望京西路 26 号底商", "opentime_today": "10:00-21:30", "tel": "010-84756037", "business_area": "望京", "aliases": ["川味小炒", "川味小炒望京"] }
+    },
+    {
+      "id": "shop-038",
+      "name": "妈妈味家常小炒·望京档口",
+      "fields": { "cuisine": "家常小炒", "cost_per_person": 28, "rating": 4.0, "location": "116.4683,39.9938", "address": "北京市朝阳区望京街道望京悠乐汇 B1 美食广场", "opentime_today": "10:00-21:00", "tel": "010-84756038", "business_area": "望京", "aliases": ["妈妈味", "妈妈味小炒"] }
+    },
+    {
+      "id": "shop-039",
+      "name": "gaga 鲜语·望京店",
+      "fields": { "cuisine": "轻食", "cost_per_person": 55, "rating": 4.7, "location": "116.4788,39.9885", "address": "北京市朝阳区望京街道望京 SOHO T3 1F", "opentime_today": "09:00-21:00", "tel": "010-84756039", "business_area": "望京", "aliases": ["gaga", "gaga鲜语"] }
+    },
+    {
+      "id": "shop-040",
+      "name": "wagas·望京店",
+      "fields": { "cuisine": "轻食", "cost_per_person": 50, "rating": 4.6, "location": "116.4702,39.9963", "address": "北京市朝阳区望京街道望京 SOHO T1 1F", "opentime_today": "09:00-21:00", "tel": "010-84756040", "business_area": "望京", "aliases": ["wagas", "沃歌斯"] }
+    },
+    {
+      "id": "shop-041",
+      "name": "沙拉日记·望京档口",
+      "fields": { "cuisine": "轻食", "cost_per_person": 30, "rating": 4.1, "location": "116.4690,39.9940", "address": "北京市朝阳区望京街道望京悠乐汇 B1 美食广场", "opentime_today": "10:00-21:00", "tel": "010-84756041", "business_area": "望京", "aliases": ["沙拉日记"] }
+    },
+    {
+      "id": "shop-042",
+      "name": "喜茶·望京 SOHO 店",
+      "fields": { "cuisine": "奶茶", "cost_per_person": 30, "rating": 4.6, "location": "116.4786,39.9884", "address": "北京市朝阳区望京街道望京 SOHO T3 1F", "opentime_today": "10:00-22:00", "tel": "010-84756042", "business_area": "望京", "aliases": ["喜茶", "HEYTEA"] }
+    },
+    {
+      "id": "shop-043",
+      "name": "霸王茶姬·望京店",
+      "fields": { "cuisine": "奶茶", "cost_per_person": 20, "rating": 4.5, "location": "116.4700,39.9961", "address": "北京市朝阳区望京街道望京 SOHO T1 1F", "opentime_today": "10:00-22:00", "tel": "010-84756043", "business_area": "望京", "aliases": ["霸王茶姬", "CHAGEE"] }
+    },
+    {
+      "id": "shop-044",
+      "name": "蜜雪冰城·望京店",
+      "fields": { "cuisine": "奶茶", "cost_per_person": 10, "rating": 4.0, "location": "116.4684,39.9941", "address": "北京市朝阳区望京街道望京悠乐汇 B1 档口", "opentime_today": "10:00-22:30", "tel": "010-84756044", "business_area": "望京", "aliases": ["蜜雪冰城", "蜜雪"] }
+    },
+    {
+      "id": "shop-045",
+      "name": "幸福西饼·望京店",
+      "fields": { "cuisine": "甜品", "cost_per_person": 30, "rating": 4.5, "location": "116.4711,39.9953", "address": "北京市朝阳区望京街道望京西路 32 号底商", "opentime_today": "09:00-21:00", "tel": "010-84756045", "business_area": "望京", "aliases": ["幸福西饼", "蛋糕"] }
+    },
+    {
+      "id": "shop-046",
+      "name": "鲍师傅糕点·望京店",
+      "fields": { "cuisine": "甜品", "cost_per_person": 28, "rating": 4.6, "location": "116.4695,39.9958", "address": "北京市朝阳区望京街道望京 SOHO T2 1F", "opentime_today": "09:00-21:30", "tel": "010-84756046", "business_area": "望京", "aliases": ["鲍师傅", "鲍师傅糕点"] }
+    },
+    {
+      "id": "shop-047",
+      "name": "甜啦啦甜品·望京档口",
+      "fields": { "cuisine": "甜品", "cost_per_person": 18, "rating": 4.0, "location": "116.4686,39.9939", "address": "北京市朝阳区望京街道望京悠乐汇 B1 美食广场", "opentime_today": "10:00-22:00", "tel": "010-84756047", "business_area": "望京", "aliases": ["甜啦啦"] }
     }
   ],
   "state_machines": [
@@ -888,7 +1028,47 @@
         "rate_per_minute": 0.15,
         "rush_start": "17:30"
       }
-    }
+    },
+    {
+      "_comment": "shop-028 隆江猪脚饭：快餐外卖店，基本无堂食长队",
+      "target_id": "shop-028",
+      "type": "event_driven",
+      "params": { "base_queue": 3 }
+    },
+    {
+      "_comment": "shop-029 阿婆牌猪脚饭：快餐外卖店，低流量",
+      "target_id": "shop-029",
+      "type": "event_driven",
+      "params": { "base_queue": 2 }
+    },
+    {
+      "_comment": "shop-030 潮味轩猪脚饭：美食广场档口，无堂食队列",
+      "target_id": "shop-030",
+      "type": "event_driven",
+      "params": { "base_queue": 1 }
+    },
+    {
+      "_comment": "shop-031 叫了个炸鸡：夜宵外卖店，几乎无堂食",
+      "target_id": "shop-031",
+      "type": "event_driven",
+      "params": { "base_queue": 2 }
+    },
+    { "_comment": "shop-032 杨国福麻辣烫：外卖店低排队", "target_id": "shop-032", "type": "event_driven", "params": { "base_queue": 3 } },
+    { "_comment": "shop-033 张亮麻辣烫：档口无排队", "target_id": "shop-033", "type": "event_driven", "params": { "base_queue": 1 } },
+    { "_comment": "shop-034 和府捞面：中等流量", "target_id": "shop-034", "type": "event_driven", "params": { "base_queue": 4 } },
+    { "_comment": "shop-035 味千拉面：外卖店", "target_id": "shop-035", "type": "event_driven", "params": { "base_queue": 2 } },
+    { "_comment": "shop-036 湘当有味家常小炒", "target_id": "shop-036", "type": "event_driven", "params": { "base_queue": 3 } },
+    { "_comment": "shop-037 川味小炒", "target_id": "shop-037", "type": "event_driven", "params": { "base_queue": 2 } },
+    { "_comment": "shop-038 妈妈味家常小炒档口", "target_id": "shop-038", "type": "event_driven", "params": { "base_queue": 1 } },
+    { "_comment": "shop-039 gaga 鲜语轻食", "target_id": "shop-039", "type": "event_driven", "params": { "base_queue": 2 } },
+    { "_comment": "shop-040 wagas 轻食", "target_id": "shop-040", "type": "event_driven", "params": { "base_queue": 2 } },
+    { "_comment": "shop-041 沙拉日记档口", "target_id": "shop-041", "type": "event_driven", "params": { "base_queue": 1 } },
+    { "_comment": "shop-042 喜茶：茶饮外卖，出餐快", "target_id": "shop-042", "type": "event_driven", "params": { "base_queue": 3 } },
+    { "_comment": "shop-043 霸王茶姬", "target_id": "shop-043", "type": "event_driven", "params": { "base_queue": 2 } },
+    { "_comment": "shop-044 蜜雪冰城档口", "target_id": "shop-044", "type": "event_driven", "params": { "base_queue": 2 } },
+    { "_comment": "shop-045 幸福西饼", "target_id": "shop-045", "type": "event_driven", "params": { "base_queue": 1 } },
+    { "_comment": "shop-046 鲍师傅糕点", "target_id": "shop-046", "type": "event_driven", "params": { "base_queue": 4 } },
+    { "_comment": "shop-047 甜啦啦甜品档口", "target_id": "shop-047", "type": "event_driven", "params": { "base_queue": 1 } }
   ],
   "events": [
     {
