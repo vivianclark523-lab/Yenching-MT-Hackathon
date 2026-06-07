@@ -17,7 +17,8 @@
         "preferred_cuisines": ["川菜", "酸菜鱼", "湘菜", "面食", "北京菜"],
         "avoid_cuisines": ["重油火锅连续两天", "预制菜风险高"],
         "delivery_address": "望京 SOHO 附近",
-        "usual_meal_times": ["12:10", "18:40"]
+        "usual_meal_times": ["12:10", "18:40"],
+        "is_member": true
       }
     },
     {
@@ -162,6 +163,244 @@
         "delivery_minutes": 29,
         "prepared_food_risk": "low",
         "is_signature": true
+      }
+    },
+    {
+      "id": "dish-010",
+      "name": "海底捞·番茄锅底单人套餐",
+      "fields": {
+        "shop_id": "shop-001",
+        "category": "火锅",
+        "cuisine": "火锅",
+        "price_cents": 3900,
+        "tags": ["旗舰", "单人套餐", "可定制锅底"],
+        "delivery_minutes": 32,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-011",
+      "name": "鲜切牛肉",
+      "fields": {
+        "shop_id": "shop-001",
+        "category": "火锅配菜",
+        "cuisine": "火锅",
+        "price_cents": 2200,
+        "tags": ["旗舰", "招牌涮菜"],
+        "delivery_minutes": 32,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-012",
+      "name": "捞派小酥肉",
+      "fields": {
+        "shop_id": "shop-001",
+        "category": "小吃",
+        "cuisine": "火锅",
+        "price_cents": 1600,
+        "tags": ["旗舰", "凑单友好"],
+        "delivery_minutes": 32,
+        "prepared_food_risk": "low",
+        "is_signature": false
+      }
+    },
+    {
+      "id": "dish-013",
+      "name": "招牌酸梅汤",
+      "fields": {
+        "shop_id": "shop-001",
+        "category": "饮品",
+        "cuisine": "火锅",
+        "price_cents": 1200,
+        "tags": ["旗舰", "解腻", "热天友好"],
+        "delivery_minutes": 32,
+        "prepared_food_risk": "low",
+        "is_signature": false
+      }
+    },
+    {
+      "id": "dish-014",
+      "name": "海鲜菌菇拼盘",
+      "fields": {
+        "shop_id": "shop-001",
+        "category": "火锅配菜",
+        "cuisine": "火锅",
+        "price_cents": 2800,
+        "tags": ["旗舰", "高性价比拼盘"],
+        "delivery_minutes": 32,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-020",
+      "name": "隆江猪脚饭(标准)",
+      "fields": {
+        "shop_id": "shop-028",
+        "category": "猪脚饭",
+        "cuisine": "猪脚饭",
+        "price_cents": 2600,
+        "tags": ["核心品类", "单点"],
+        "delivery_minutes": 26,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-021",
+      "name": "隆江猪脚饭+卤蛋+例汤套餐",
+      "fields": {
+        "shop_id": "shop-028",
+        "category": "猪脚饭",
+        "cuisine": "猪脚饭",
+        "price_cents": 3200,
+        "tags": ["核心品类", "套餐", "含卤蛋例汤"],
+        "delivery_minutes": 26,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-022",
+      "name": "隆江卤味拼盘",
+      "fields": {
+        "shop_id": "shop-028",
+        "category": "小吃",
+        "cuisine": "猪脚饭",
+        "price_cents": 1200,
+        "tags": ["凑单友好"],
+        "delivery_minutes": 26,
+        "prepared_food_risk": "low",
+        "is_signature": false
+      }
+    },
+    {
+      "id": "dish-023",
+      "name": "隆江凉茶",
+      "fields": {
+        "shop_id": "shop-028",
+        "category": "饮品",
+        "cuisine": "猪脚饭",
+        "price_cents": 800,
+        "tags": ["凑单友好", "解腻"],
+        "delivery_minutes": 26,
+        "prepared_food_risk": "low",
+        "is_signature": false
+      }
+    },
+    {
+      "id": "dish-024",
+      "name": "阿婆招牌猪脚饭",
+      "fields": {
+        "shop_id": "shop-029",
+        "category": "猪脚饭",
+        "cuisine": "猪脚饭",
+        "price_cents": 2400,
+        "tags": ["核心品类", "单点"],
+        "delivery_minutes": 28,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-025",
+      "name": "阿婆双拼猪脚饭(加瘦肉)",
+      "fields": {
+        "shop_id": "shop-029",
+        "category": "猪脚饭",
+        "cuisine": "猪脚饭",
+        "price_cents": 3000,
+        "tags": ["核心品类", "套餐", "加量"],
+        "delivery_minutes": 28,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-026",
+      "name": "阿婆现磨豆浆",
+      "fields": {
+        "shop_id": "shop-029",
+        "category": "饮品",
+        "cuisine": "猪脚饭",
+        "price_cents": 600,
+        "tags": ["凑单友好"],
+        "delivery_minutes": 28,
+        "prepared_food_risk": "low",
+        "is_signature": false
+      }
+    },
+    {
+      "id": "dish-027",
+      "name": "潮味轩猪脚饭",
+      "fields": {
+        "shop_id": "shop-030",
+        "category": "猪脚饭",
+        "cuisine": "猪脚饭",
+        "price_cents": 2200,
+        "tags": ["核心品类", "单点", "低价"],
+        "delivery_minutes": 30,
+        "prepared_food_risk": "medium",
+        "is_signature": false
+      }
+    },
+    {
+      "id": "dish-028",
+      "name": "潮味轩猪脚饭套餐",
+      "fields": {
+        "shop_id": "shop-030",
+        "category": "猪脚饭",
+        "cuisine": "猪脚饭",
+        "price_cents": 2700,
+        "tags": ["核心品类", "套餐"],
+        "delivery_minutes": 30,
+        "prepared_food_risk": "medium",
+        "is_signature": false
+      }
+    },
+    {
+      "id": "dish-030",
+      "name": "黄金炸鸡(8块)",
+      "fields": {
+        "shop_id": "shop-031",
+        "category": "炸鸡",
+        "cuisine": "炸鸡",
+        "price_cents": 4200,
+        "tags": ["夜宵", "招牌", "常点"],
+        "delivery_minutes": 30,
+        "prepared_food_risk": "low",
+        "is_signature": true
+      }
+    },
+    {
+      "id": "dish-031",
+      "name": "冰镇可乐",
+      "fields": {
+        "shop_id": "shop-031",
+        "category": "饮品",
+        "cuisine": "炸鸡",
+        "price_cents": 900,
+        "tags": ["夜宵", "凑单友好"],
+        "delivery_minutes": 30,
+        "prepared_food_risk": "low",
+        "is_signature": false
+      }
+    },
+    {
+      "id": "dish-032",
+      "name": "黄金薯条",
+      "fields": {
+        "shop_id": "shop-031",
+        "category": "小吃",
+        "cuisine": "炸鸡",
+        "price_cents": 1200,
+        "tags": ["夜宵", "凑单友好"],
+        "delivery_minutes": 30,
+        "prepared_food_risk": "low",
+        "is_signature": false
       }
     },
     {

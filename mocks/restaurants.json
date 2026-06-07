@@ -510,6 +510,66 @@
           "京门"
         ]
       }
+    },
+    {
+      "id": "shop-028",
+      "name": "隆江猪脚饭·望京店",
+      "fields": {
+        "cuisine": "猪脚饭",
+        "cost_per_person": 30,
+        "rating": 4.6,
+        "location": "116.4668,39.9962",
+        "address": "北京市朝阳区望京街道望京西路 28 号底商",
+        "opentime_today": "09:00-22:00",
+        "tel": "010-84756028",
+        "business_area": "望京",
+        "aliases": ["隆江猪脚饭", "隆江", "猪脚饭望京"]
+      }
+    },
+    {
+      "id": "shop-029",
+      "name": "阿婆牌猪脚饭·望京 SOHO 店",
+      "fields": {
+        "cuisine": "猪脚饭",
+        "cost_per_person": 28,
+        "rating": 4.3,
+        "location": "116.4781,39.9882",
+        "address": "北京市朝阳区望京街道望京 SOHO T3 B1",
+        "opentime_today": "10:00-21:30",
+        "tel": "010-84756029",
+        "business_area": "望京",
+        "aliases": ["阿婆牌猪脚饭", "阿婆猪脚饭", "阿婆牌"]
+      }
+    },
+    {
+      "id": "shop-030",
+      "name": "潮味轩猪脚饭·望京悠乐汇",
+      "fields": {
+        "cuisine": "猪脚饭",
+        "cost_per_person": 26,
+        "rating": 4.1,
+        "location": "116.4699,39.9941",
+        "address": "北京市朝阳区望京街道望京悠乐汇 B1 美食广场",
+        "opentime_today": "10:00-22:00",
+        "tel": "010-84756030",
+        "business_area": "望京",
+        "aliases": ["潮味轩", "潮味轩猪脚饭"]
+      }
+    },
+    {
+      "id": "shop-031",
+      "name": "叫了个炸鸡·望京夜宵店",
+      "fields": {
+        "cuisine": "炸鸡",
+        "cost_per_person": 45,
+        "rating": 4.5,
+        "location": "116.4707,39.9951",
+        "address": "北京市朝阳区望京街道望京 SOHO T1 B1 夜宵档",
+        "opentime_today": "11:00-02:00",
+        "tel": "010-84756031",
+        "business_area": "望京",
+        "aliases": ["叫了个炸鸡", "炸鸡", "炸鸡望京"]
+      }
     }
   ],
   "state_machines": [
@@ -888,6 +948,30 @@
         "rate_per_minute": 0.15,
         "rush_start": "17:30"
       }
+    },
+    {
+      "_comment": "shop-028 隆江猪脚饭：快餐外卖店，基本无堂食长队",
+      "target_id": "shop-028",
+      "type": "event_driven",
+      "params": { "base_queue": 3 }
+    },
+    {
+      "_comment": "shop-029 阿婆牌猪脚饭：快餐外卖店，低流量",
+      "target_id": "shop-029",
+      "type": "event_driven",
+      "params": { "base_queue": 2 }
+    },
+    {
+      "_comment": "shop-030 潮味轩猪脚饭：美食广场档口，无堂食队列",
+      "target_id": "shop-030",
+      "type": "event_driven",
+      "params": { "base_queue": 1 }
+    },
+    {
+      "_comment": "shop-031 叫了个炸鸡：夜宵外卖店，几乎无堂食",
+      "target_id": "shop-031",
+      "type": "event_driven",
+      "params": { "base_queue": 2 }
     }
   ],
   "events": [
