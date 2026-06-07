@@ -296,8 +296,8 @@ openclaw onboard
 openclaw gateway
 
 # 5. 启动沙盒 UI（另一个终端）
-python sandbox/server.py
-# 浏览器开 http://localhost:8000/sandbox/
+python3 sandbox/server.py          # 默认端口 8765，可加 --port 改
+# 浏览器开 http://127.0.0.1:8765
 
 # 6. 触发任一 Skill 测试
 # 在飞书群里 @管家 试一句 "今晚和朋友吃火锅"
