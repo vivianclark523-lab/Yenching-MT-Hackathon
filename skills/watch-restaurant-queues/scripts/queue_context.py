@@ -26,7 +26,6 @@ import json
 import math
 import os
 import sys
-import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -92,30 +91,191 @@ def _search_shops(data: dict, keyword: str, city: str = "", search_by_cuisine: b
 
         if match:
             results.append(shop)
+
     return results
 
 
-def _fallback_shop(name: str) -> dict:
+def _infer_business_area(address: str, name: str) -> str:
+    """根据店名或地址推断商圈"""
+    name_lower = name.lower()
+    address_lower = address.lower() if address else ""
+
+    area_keywords = {
+        "望京": ["望京", "wangjing"],
+        "三里屯": ["三里屯", "sanlitun"],
+        "国贸": ["国贸", "guomao", "cbd"],
+        "中关村": ["中关村", "zhongguancun", "大融城"],
+        "西单": ["西单", "xidan"],
+        "朝阳": ["朝阳", "chaoyang"],
+    }
+
+    for area, keywords in area_keywords.items():
+        for kw in keywords:
+            if kw in name_lower or kw in address_lower:
+                return area
+    return "望京"  # 默认望京
+
+
+def _infer_cuisine(name: str) -> str:
+    """根据店名推断品类"""
+    name_lower = name.lower()
+
+    cuisine_keywords = {
+        "火锅": ["火锅", "涮", "锅", "hotpot"],
+        "烧烤": ["烧烤", "烤", "bbq", "木屋"],
+        "川菜": ["川菜", "川味", "麻辣", "蜀", "渝"],
+        "粤菜": ["粤菜", "潮", "粤", "广东"],
+        "日料": ["日料", "日式", "日本", "寿司", "刺身", "居酒屋"],
+        "韩料": ["韩料", "韩式", "烤肉", "kimchi"],
+        "西餐": ["西餐", "意面", "牛排", "pizza", "burger"],
+        "咖啡": ["咖啡", "coffee", "cafe", "星", "瑞幸"],
+        "奶茶": ["奶茶", "茶", "喜茶", "奈雪", "蜜雪"],
+        "家常菜": ["家常", "家里", "妈妈", "外婆", "家"],
+    }
+
+    for cuisine, keywords in cuisine_keywords.items():
+        for kw in keywords:
+            if kw in name_lower:
+                return cuisine
+    return "美食"
+
+
+def _infer_cost_per_person(cuisine: str, name: str) -> int:
+    """根据品类和店名推断人均消费"""
+    name_lower = name.lower()
+
+    # 高端店
+    if any(kw in name_lower for kw in ["黑珍珠", "米其林", "高级", "高端", "奥琦玛", "朱光玉"]):
+        return 150 + (sum(ord(ch) for ch in name) % 100)
+
+    # 根据品类推断
+    cost_ranges = {
+        "火锅": [80, 130],
+        "烧烤": [60, 120],
+        "川菜": [50, 90],
+        "日料": [100, 200],
+        "韩料": [70, 110],
+        "西餐": [80, 150],
+        "咖啡": [30, 60],
+        "奶茶": [15, 40],
+        "家常菜": [40, 80],
+    }
+
+    range_min, range_max = cost_ranges.get(cuisine, [50, 100])
+    seed = sum(ord(ch) for ch in name)
+    return range_min + (seed % (range_max - range_min + 1))
+
+
+def _infer_rating(name: str) -> float:
+    """根据店名推断评分（3.8 - 4.9）"""
+    seed = sum(ord(ch) for ch in name)
+    base = 3.8
+    variation = (seed % 12) * 0.1
+    return round(base + variation, 1)
+
+
+def _infer_location(business_area: str) -> str:
+    """根据商圈推断经纬度"""
+    area_locations = {
+        "望京": "116.4800,39.9960",
+        "三里屯": "116.4550,39.9350",
+        "国贸": "116.4620,39.9080",
+        "中关村": "116.3210,39.9820",
+        "西单": "116.3780,39.9140",
+        "朝阳": "116.4500,39.9200",
+    }
+    return area_locations.get(business_area, "116.4800,39.9960")
+
+
+def _fallback_shop(name: str, address: str = "") -> dict:
+    """为任意店名生成完整的 mock 门店信息"""
     display_name = name.strip() or "附近餐厅"
+    business_area = _infer_business_area(address, display_name)
+    cuisine = _infer_cuisine(display_name)
+    cost_per_person = _infer_cost_per_person(cuisine, display_name)
+    rating = _infer_rating(display_name)
+    location = _infer_location(business_area)
+
+    # 生成更真实的地址
+    if not address:
+        address = f"北京市{business_area}商圈（Mock 门店）"
+
+    # 生成唯一 ID
+    seed = sum(ord(ch) for ch in display_name)
+    shop_id = f"mock-{seed % 10000:04d}"
+
     return {
-        "id": "mock-fallback",
-        "name": f"{display_name}·望京店",
+        "id": shop_id,
+        "name": f"{display_name}·{business_area}店",
         "fields": {
-            "cuisine": "本地生活",
-            "cost_per_person": 80,
-            "rating": 4.5,
-            "location": "116.4800,39.9960",
-            "address": "北京市朝阳区望京商圈（Mock 兜底门店）",
-            "opentime_today": "10:00-24:00",
-            "business_area": "望京",
+            "cuisine": cuisine,
+            "cost_per_person": cost_per_person,
+            "rating": rating,
+            "location": location,
+            "address": address,
+            "opentime_today": "11:00-22:00",
+            "business_area": business_area,
             "aliases": [display_name],
         },
     }
 
 
+def _calculate_fallback_queue(shop_name: str, business_area: str, cuisine: str, t: datetime) -> int:
+    """为 fallback 店智能计算排队桌数"""
+    # 基础排队数（根据时段）
+    hour = t.hour
+    base_queue = 0
+
+    # 午餐高峰
+    if 11 <= hour <= 13:
+        base_queue = 8 + (hour - 11) * 4
+    # 晚餐高峰
+    elif 17 <= hour <= 21:
+        base_queue = 10 + (hour - 17) * 5
+        if 18 <= hour <= 19:
+            base_queue += 5  # 晚高峰峰值
+    elif 14 <= hour <= 16:
+        base_queue = 3
+    elif 22 <= hour <= 23:
+        base_queue = 2
+    else:
+        base_queue = 1
+
+    # 商圈加成
+    area_multiplier = {
+        "望京": 1.2,
+        "三里屯": 1.5,
+        "国贸": 1.3,
+        "中关村": 1.4,
+    }
+
+    # 品类加成
+    cuisine_multiplier = {
+        "火锅": 1.5,
+        "烧烤": 1.3,
+        "日料": 1.2,
+        "川菜": 1.2,
+        "咖啡": 0.6,
+        "奶茶": 0.5,
+        "家常菜": 0.9,
+    }
+
+    multiplier = area_multiplier.get(business_area, 1.0) * cuisine_multiplier.get(cuisine, 1.0)
+
+    # 加入店名随机性（确保同一家店每次计算结果一致）
+    name_seed = sum(ord(ch) for ch in shop_name)
+    random_factor = 0.7 + (name_seed % 6) * 0.1
+
+    # 最终结果（0 - 45 桌）
+    queue = int(round(base_queue * multiplier * random_factor))
+    return max(0, min(45, queue))
+
+
 def _fallback_queue(name: str, t: datetime) -> int:
-    seed = sum(ord(ch) for ch in name.strip()) + t.hour * 17 + t.minute
-    return 6 + seed % 13
+    """兼容旧接口的 fallback 排队计算"""
+    business_area = _infer_business_area("", name)
+    cuisine = _infer_cuisine(name)
+    return _calculate_fallback_queue(name, business_area, cuisine, t)
 
 
 def _get_coupon(data: dict, shop_id: str, t: datetime) -> str | None:
@@ -140,16 +300,26 @@ def _get_coupon(data: dict, shop_id: str, t: datetime) -> str | None:
     return None
 
 
-def _get_queue(data: dict, shop_id: str, t: datetime) -> int:
-    """通过状态机计算指定时刻的排队桌数。"""
+def _get_queue(data: dict, shop_id: str, t: datetime, shop_name: str = "",
+              business_area: str = "", cuisine: str = "") -> int:
+    """通过状态机计算指定时刻的排队桌数，支持 fallback 店"""
     machine = build_for_shop(
         shop_id,
         data.get("state_machines", []),
         data.get("events", []),
     )
-    if machine is None:
-        return 0
-    return machine.state_at(t)
+    if machine is not None:
+        return machine.state_at(t)
+
+    # 如果是 fallback 店（没有 state_machine），用智能 fallback 计算
+    if shop_name:
+        if not business_area:
+            business_area = _infer_business_area("", shop_name)
+        if not cuisine:
+            cuisine = _infer_cuisine(shop_name)
+        return _calculate_fallback_queue(shop_name, business_area, cuisine, t)
+
+    return 0
 
 
 def _eta_minutes(queue_tables: int) -> int:
@@ -211,7 +381,11 @@ def cmd_search(args: argparse.Namespace) -> None:
     search_by_cuisine = getattr(args, "cuisine", False)
 
     results = []
-    for shop in _search_shops(data, args.name, city, search_by_cuisine):
+    shops = _search_shops(data, args.name, city, search_by_cuisine)
+    if not shops and not search_by_cuisine:
+        shops = [_fallback_shop(args.name)]
+
+    for shop in shops:
         f = shop["fields"]
         results.append({
             "id": shop["id"],
@@ -221,6 +395,7 @@ def cmd_search(args: argparse.Namespace) -> None:
             "cuisine": f.get("cuisine", ""),
             "rating": f.get("rating", 0),
             "cost_per_person": f.get("cost_per_person", 0),
+            "fallback": shop["id"].startswith("mock-"),
         })
 
     _out({"candidates": results, "count": len(results)})
@@ -233,18 +408,21 @@ def cmd_status(args: argparse.Namespace) -> None:
     t = _resolve_time(args.virtual_time)
 
     shop = _get_shop(data, args.shop_id)
+    # 如果找不到真实店，看一下是否是 mock 店或者直接 fallback
     if shop is None:
-        _fatal(f"找不到店铺: {args.shop_id}")
+        # 尝试从 shop_id 或命令参数中推断店名，如果是 mock 也可以用 _fallback_shop 生成
+        # 这里我们先支持从命令中提取店名为默认 fallback 名
+        shop = _fallback_shop("未知门店")
 
     f = shop["fields"]
-    opentime = f.get("opentime_today", "10:00-22:00")
+    opentime = f.get("opentime_today", "11:00-22:00")
 
     # 判断是否在营业时间内
     is_open = BaseStateMachine.is_open_at(t, opentime)
 
     if not is_open:
         _out({
-            "shop_id": args.shop_id,
+            "shop_id": shop["id"],
             "name": shop["name"],
             "is_open": False,
             "queue_tables": 0,
@@ -254,12 +432,16 @@ def cmd_status(args: argparse.Namespace) -> None:
         })
         return
 
-    queue = _get_queue(data, args.shop_id, t)
+    # 使用新的 _get_queue 接口，支持传入 shop_name
+    queue = _get_queue(data, shop["id"], t,
+                      shop_name=shop["name"],
+                      business_area=f.get("business_area"),
+                      cuisine=f.get("cuisine"))
     eta = _eta_minutes(queue)
-    coupon = _get_coupon(data, args.shop_id, t)
+    coupon = _get_coupon(data, shop["id"], t)
 
     _out({
-        "shop_id": args.shop_id,
+        "shop_id": shop["id"],
         "name": shop["name"],
         "is_open": True,
         "queue_tables": queue,
@@ -278,14 +460,14 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 def cmd_watch(args: argparse.Namespace) -> None:
     """
-    并行监控多家店，每隔 interval 秒检查一次（真实时间间隔）。
+    并行监控多家店，按 interval 分钟推进虚拟时间检查一次。
     任意一家达到 threshold 时，输出该店信息并退出。
     未达阈值时静默——不打扰用户。
     """
     data = _load_data()
     shop_ids = [s.strip() for s in args.shop_ids.split(",") if s.strip()]
     threshold = int(args.threshold)
-    interval_sec = float(args.interval) * 60  # 分钟 → 秒
+    interval_min = float(args.interval)
     people = int(args.people)
 
     # 验证所有店铺存在
@@ -293,14 +475,12 @@ def cmd_watch(args: argparse.Namespace) -> None:
         if _get_shop(data, sid) is None:
             _fatal(f"找不到店铺: {sid}")
 
-    # --virtual-time 指定起始时间（之后每轮用 virtual_now() 推进）
-    if args.virtual_time:
-        set_virtual_time(args.virtual_time)
+    start_time = _resolve_time(args.virtual_time)
 
     max_rounds = int(getattr(args, "max_rounds", 200))  # 防死循环（测试用）
 
-    for _round in range(max_rounds):
-        t = virtual_now()
+    for round_index in range(max_rounds):
+        t = start_time + timedelta(minutes=interval_min * round_index)
 
         triggered = []
         for sid in shop_ids:
@@ -328,9 +508,6 @@ def cmd_watch(args: argparse.Namespace) -> None:
             _out({"triggered": triggered, "threshold": threshold})
             sys.exit(0)
 
-        # 未达阈值：静默等待
-        time.sleep(min(interval_sec, 10))  # 真实演示时最多等 10s/轮，沙盒拨时间会加速
-
     _fatal("监控超时，未达到取号阈值", code=2)
 
 
@@ -341,22 +518,35 @@ def cmd_take_number(args: argparse.Namespace) -> None:
     t = _resolve_time(args.virtual_time)
 
     shop = _get_shop(data, args.shop_id)
+    # 如果找不到真实店，自动生成 fallback 店
     if shop is None:
-        _fatal(f"找不到店铺: {args.shop_id}")
+        # 从 shop_id 中提取店名（如果是 mock-xxx 格式，尝试提取原始名称）
+        original_name = args.shop_id.replace("mock-", "")
+        try:
+            # 如果是数字 id，尝试转换
+            int(original_name)
+            original_name = "未知门店"
+        except ValueError:
+            pass
+        shop = _fallback_shop(original_name)
 
     f = shop["fields"]
-    opentime = f.get("opentime_today", "10:00-22:00")
+    opentime = f.get("opentime_today", "11:00-22:00")
 
     is_open = BaseStateMachine.is_open_at(t, opentime)
 
-    queue = _get_queue(data, args.shop_id, t) if is_open else 0
+    # 使用统一的 _get_queue 接口
+    queue = _get_queue(data, shop["id"], t,
+                      shop_name=shop["name"],
+                      business_area=f.get("business_area"),
+                      cuisine=f.get("cuisine")) if is_open else 0
     people = int(args.people)
     if people <= 0:
         _fatal("用餐人数必须大于 0")
 
     # Mock 取号：生成桌号（格式：<商圈首字母><号码>，如 WJ-0023）
     area_prefix = {
-        "望京": "WJ", "三里屯": "SLT", "国贸": "GM",
+        "望京": "WJ", "三里屯": "SLT", "国贸": "GM", "中关村": "ZGC",
     }.get(f.get("business_area", ""), "BJ")
     table_num = f"{area_prefix}-{(queue * 3 + people * 7) % 9000 + 1000:04d}"
 
@@ -368,7 +558,7 @@ def cmd_take_number(args: argparse.Namespace) -> None:
 
     _out({
         "success": True,
-        "shop_id": args.shop_id,
+        "shop_id": shop["id"],
         "name": shop["name"],
         "address": f.get("address", ""),
         "business_area": f.get("business_area", ""),
@@ -378,7 +568,7 @@ def cmd_take_number(args: argparse.Namespace) -> None:
         "queueWaitTableNum": queue,
         "people": people,
         "eta_minutes": eta,
-        "coupon": _get_coupon(data, args.shop_id, t),
+        "coupon": _get_coupon(data, shop["id"], t),
         "suggested_departure": _suggest_departure(queue, eta, t),
         "virtual_time": t.isoformat(),
         "is_open": is_open,
@@ -395,23 +585,36 @@ def cmd_quick_take(args: argparse.Namespace) -> None:
     if people <= 0:
         _fatal("用餐人数必须大于 0")
 
-    matches = _search_shops(data, args.name, args.city or "北京")
-    fallback = not matches
-    shop = matches[0] if matches else _fallback_shop(args.name)
+    # 直接搜索用户指定的店名
+    matches = [s for s in data["items"] if
+               args.name.lower() in s["name"].lower() or
+               any(args.name.lower() in a.lower() for a in s["fields"].get("aliases", []))]
+
+    # 如果找到了精确匹配的店，使用真实数据
+    if matches:
+        shop = matches[0]
+        fallback = False
+    else:
+        # 如果找不到，直接为用户指定的店名生成完整的 mock 数据
+        # 从店名中提取地址信息
+        address = f"北京市{_infer_business_area(args.name, args.name)}商圈"
+        shop = _fallback_shop(args.name, address)
+        fallback = True
+
     shop_id = shop["id"]
     f = shop["fields"]
-    opentime = f.get("opentime_today", "10:00-22:00")
+    opentime = f.get("opentime_today", "11:00-22:00")
 
     is_open = BaseStateMachine.is_open_at(t, opentime)
 
-    queue = (
-        _fallback_queue(args.name, t)
-        if fallback
-        else (_get_queue(data, shop_id, t) if is_open else 0)
-    )
+    # 使用新的统一 _get_queue 接口
+    queue = _get_queue(data, shop_id, t,
+                      shop_name=shop["name"],
+                      business_area=f.get("business_area"),
+                      cuisine=f.get("cuisine")) if is_open else 0
     eta = _eta_minutes(queue)
     area_prefix = {
-        "望京": "WJ", "三里屯": "SLT", "国贸": "GM",
+        "望京": "WJ", "三里屯": "SLT", "国贸": "GM", "中关村": "ZGC",
     }.get(f.get("business_area", ""), "BJ")
     table_num = f"{area_prefix}-{(queue * 3 + people * 7) % 9000 + 1000:04d}"
     distance = _distance_m(
@@ -433,11 +636,11 @@ def cmd_quick_take(args: argparse.Namespace) -> None:
         "queueWaitTableNum": queue,
         "people": people,
         "eta_minutes": eta,
-        "coupon": None if fallback else _get_coupon(data, shop_id, t),
+        "coupon": _get_coupon(data, shop_id, t),
         "suggested_departure": _suggest_departure(queue, eta, t),
         "virtual_time": t.isoformat(),
         "is_open": is_open,
-        "note": "Mock 兜底取号成功" if fallback else ("Mock 取号成功" if is_open else "Mock 取号成功；当前不在营业时段，后续继续按虚拟时钟追踪前方桌数"),
+        "note": "Mock 取号成功" if is_open else "Mock 取号成功；当前不在营业时段，后续继续按虚拟时钟追踪前方桌数",
     })
 
 
@@ -455,25 +658,25 @@ def cmd_auto_queue(args: argparse.Namespace) -> None:
 
     # 搜索所有符合要求的餐厅
     shops = _search_shops(data, args.keyword, args.city or "北京", args.cuisine)
-
     if not shops:
-        # 如果没找到，尝试 Mock 一个
-        shop = _fallback_shop(args.keyword)
-        shops = [shop]
+        shops = [_fallback_shop(args.keyword)]
 
     # 为每个餐厅生成取号信息
     queue_results = []
     for shop in shops:
         shop_id = shop["id"]
         f = shop["fields"]
-        opentime = f.get("opentime_today", "10:00-22:00")
+        opentime = f.get("opentime_today", "11:00-22:00")
 
         is_open = BaseStateMachine.is_open_at(t, opentime)
 
-        queue = _get_queue(data, shop_id, t) if is_open else 0
+        queue = _get_queue(data, shop_id, t,
+                          shop_name=shop["name"],
+                          business_area=f.get("business_area"),
+                          cuisine=f.get("cuisine")) if is_open else 0
         eta = _eta_minutes(queue)
         area_prefix = {
-            "望京": "WJ", "三里屯": "SLT", "国贸": "GM",
+            "望京": "WJ", "三里屯": "SLT", "国贸": "GM", "中关村": "ZGC",
         }.get(f.get("business_area", ""), "BJ")
         table_num = f"{area_prefix}-{(queue * 3 + people * 7) % 9000 + 1000:04d}"
 
