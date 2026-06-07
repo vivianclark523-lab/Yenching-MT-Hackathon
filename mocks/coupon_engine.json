@@ -1,0 +1,336 @@
+{
+  "schema_version": 2,
+  "kind": "coupons_v2",
+  "_comment": "Skill 2 综合用券系统的结构化券池（设计见 docs/design/coupon-system-design.md）。与 v1 的 coupons.json 分治：v1 服务 Skill 1/3 的“此刻有券”字符串展示；本文件服务 Skill 2 的叠券计算引擎。金额一律 _cents 整数，折扣率用基点 rate_bps（85折=8500）。description 仅展示、不参与计算。Demo 基准时间 2026-06-07（周日）18:00。",
+  "items": [
+    {
+      "id": "ce-001",
+      "name": "全店满50减12",
+      "fields": {
+        "description": "全店满 50 减 12",
+        "type": "shop_full_reduce",
+        "layer": 1,
+        "shop_id": "shop-001",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 5000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 1200, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-001",
+        "stackable_with": ["item", "platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-002",
+      "name": "全店满80减22",
+      "fields": {
+        "description": "全店满 80 减 22",
+        "type": "shop_full_reduce",
+        "layer": 1,
+        "shop_id": "shop-001",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 8000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 2200, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-001",
+        "stackable_with": ["item", "platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-003",
+      "name": "饮品满10减4",
+      "fields": {
+        "description": "饮品品类满 10 减 4",
+        "type": "category_reduce",
+        "layer": 0,
+        "shop_id": "shop-001",
+        "scope": { "kind": "category", "ref": "饮品" },
+        "threshold": { "basis": "scope_subtotal", "min_amount_cents": 1000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 400, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 10,
+        "exclusive_group": "item-drink@shop-001",
+        "stackable_with": ["shop", "platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-004",
+      "name": "鲜切牛肉券后立减5",
+      "fields": {
+        "description": "指定单品·鲜切牛肉立减 5 元",
+        "type": "sku_coupon",
+        "layer": 0,
+        "shop_id": "shop-001",
+        "scope": { "kind": "sku", "ref": "dish-011" },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 500, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 10,
+        "exclusive_group": "item-beef@shop-001",
+        "stackable_with": ["shop", "platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-005",
+      "name": "平台无门槛立减5",
+      "fields": {
+        "description": "平台红包·无门槛立减 5 元",
+        "type": "platform_instant",
+        "layer": 2,
+        "shop_id": null,
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 500, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 30,
+        "exclusive_group": "platform",
+        "stackable_with": ["shop", "item", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-006",
+      "name": "整点神券·满65减20",
+      "fields": {
+        "description": "整点神券·满 65 减 20（18:00 放量，限量秒空）",
+        "type": "platform_full_reduce",
+        "layer": 2,
+        "shop_id": null,
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 6500, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 2000, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 30,
+        "exclusive_group": "platform",
+        "stackable_with": ["shop", "item", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": "sm-ce-006-time",
+        "stock_ref": "sm-ce-006-stock"
+      }
+    },
+    {
+      "id": "ce-007",
+      "name": "会员红包·满20减3",
+      "fields": {
+        "description": "会员红包·满 20 减 3",
+        "type": "member_packet",
+        "layer": 2,
+        "shop_id": null,
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 2000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 300, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 30,
+        "exclusive_group": "member",
+        "stackable_with": ["shop", "item", "platform", "delivery"],
+        "conditions": { "new_customer": false, "member_only": true, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-008",
+      "name": "满30免配送费",
+      "fields": {
+        "description": "满 30 免配送费",
+        "type": "delivery_fee",
+        "layer": 3,
+        "shop_id": "shop-001",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 3000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 9900, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 40,
+        "exclusive_group": "delivery@shop-001",
+        "stackable_with": ["shop", "item", "platform", "member"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-009",
+      "name": "外婆家88折最高减10",
+      "fields": {
+        "description": "外婆家·全店 88 折最高减 10",
+        "type": "shop_discount",
+        "layer": 1,
+        "shop_id": "shop-003",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 8800, "cap_cents": 1000, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-003",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-010",
+      "name": "京门老爆三·午市套餐8折",
+      "fields": {
+        "description": "京门老爆三·午市招牌套餐 8 折（11:00-14:00）",
+        "type": "shop_discount",
+        "layer": 1,
+        "shop_id": "shop-027",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 8000, "cap_cents": 1500, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-027",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": "sm-ce-010-time",
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-020",
+      "name": "隆江满28减6",
+      "fields": {
+        "description": "隆江猪脚饭·满 28 减 6",
+        "type": "shop_full_reduce",
+        "layer": 1,
+        "shop_id": "shop-028",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 2800, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 600, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-028",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-021",
+      "name": "阿婆招牌猪脚饭立减3",
+      "fields": {
+        "description": "阿婆牌·招牌猪脚饭单品立减 3 元",
+        "type": "sku_coupon",
+        "layer": 0,
+        "shop_id": "shop-029",
+        "scope": { "kind": "sku", "ref": "dish-024" },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 300, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 10,
+        "exclusive_group": "item@shop-029",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-022",
+      "name": "潮味轩新店9折",
+      "fields": {
+        "description": "潮味轩·新店 9 折最高减 5",
+        "type": "shop_discount",
+        "layer": 1,
+        "shop_id": "shop-030",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "none", "min_amount_cents": null, "min_count": null },
+        "discount": { "mode": "rate", "amount_cents": null, "rate_bps": 9000, "cap_cents": 500, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-030",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null
+      }
+    },
+    {
+      "id": "ce-023",
+      "name": "午市神券·满25减8",
+      "fields": {
+        "description": "午市整点神券·满 25 减 8（12:00 放量，限量秒空）",
+        "type": "platform_full_reduce",
+        "layer": 2,
+        "shop_id": null,
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 2500, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 800, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 30,
+        "exclusive_group": "platform",
+        "stackable_with": ["shop", "item", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": "sm-ce-023-time",
+        "stock_ref": "sm-ce-023-stock"
+      }
+    },
+    {
+      "id": "ce-030",
+      "name": "炸鸡店满50减12（我的券·今晚到期）",
+      "fields": {
+        "description": "叫了个炸鸡·满 50 减 12（已领取，今晚 24:00 过期）",
+        "type": "shop_full_reduce",
+        "layer": 1,
+        "shop_id": "shop-031",
+        "scope": { "kind": "all", "ref": null },
+        "threshold": { "basis": "order_subtotal", "min_amount_cents": 5000, "min_count": null },
+        "discount": { "mode": "amount", "amount_cents": 1200, "rate_bps": null, "cap_cents": null, "fixed_price_cents": null },
+        "application_order": 20,
+        "exclusive_group": "shop@shop-031",
+        "stackable_with": ["platform", "member", "delivery"],
+        "conditions": { "new_customer": false, "member_only": false, "weekday_in": null },
+        "validity_ref": null,
+        "stock_ref": null,
+        "held_by_user": true,
+        "expires_at": "2026-06-08T00:00:00+08:00"
+      }
+    }
+  ],
+  "state_machines": [
+    {
+      "_comment": "ce-006 整点神券·在售时段：仅 18:00-19:00 激活（periodic，queue=1 表示在售）",
+      "target_id": "sm-ce-006-time",
+      "type": "periodic",
+      "params": {
+        "segments": [{ "hour_range": [18, 19], "queue": 1 }],
+        "default_queue": 0
+      }
+    },
+    {
+      "_comment": "ce-006 整点神券·库存秒空：18:00 放量 80 张，每分钟被抢 4 张，约 18:20 售罄（monotonic_decay，state=剩余张数，0=售罄）",
+      "target_id": "sm-ce-006-stock",
+      "type": "monotonic_decay",
+      "params": { "initial_queue": 80, "rate_per_minute": 4, "rush_start": "18:00" }
+    },
+    {
+      "_comment": "ce-010 午市券·在售时段：仅 11:00-14:00 激活",
+      "target_id": "sm-ce-010-time",
+      "type": "periodic",
+      "params": {
+        "segments": [{ "hour_range": [11, 14], "queue": 1 }],
+        "default_queue": 0
+      }
+    },
+    {
+      "_comment": "ce-023 午市神券·在售时段：仅 12:00-13:00 激活",
+      "target_id": "sm-ce-023-time",
+      "type": "periodic",
+      "params": {
+        "segments": [{ "hour_range": [12, 13], "queue": 1 }],
+        "default_queue": 0
+      }
+    },
+    {
+      "_comment": "ce-023 午市神券·库存秒空：12:00 放 60 张、每分钟抢 2 张，12:30 售罄",
+      "target_id": "sm-ce-023-stock",
+      "type": "monotonic_decay",
+      "params": { "initial_queue": 60, "rate_per_minute": 2, "rush_start": "12:00" }
+    }
+  ],
+  "events": []
+}
