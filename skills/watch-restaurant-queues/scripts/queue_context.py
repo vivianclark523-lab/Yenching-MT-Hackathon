@@ -36,7 +36,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_REPO_ROOT))
 
 from mocks.clock import virtual_now, set_virtual_time, TZ_BEIJING
-from mocks.state_machine import build_for_shop
+from mocks.state_machine import build_for_shop, BaseStateMachine
 
 # 地理能力（高德路径规划等）由共享模块 scripts/amap.py 提供，Skill 3 负责实现。
 # 待 Skill 3 的 amap.py 合入 main 后，按需接入：
@@ -67,7 +67,7 @@ def _get_shop(data: dict, shop_id: str) -> dict | None:
     return next((s for s in data["items"] if s["id"] == shop_id), None)
 
 
-def _search_shops(data: dict, keyword: str, city: str = "") -> list[dict]:
+def _search_shops(data: dict, keyword: str, city: str = "", search_by_cuisine: bool = False) -> list[dict]:
     keyword = keyword.strip().lower()
     city = city.strip()
     results = []
@@ -76,11 +76,21 @@ def _search_shops(data: dict, keyword: str, city: str = "") -> list[dict]:
         name = shop["name"].lower()
         aliases = [a.lower() for a in f.get("aliases", [])]
         area = f.get("business_area", "").lower()
+        cuisine = f.get("cuisine", "").lower()
 
         if city and city not in f.get("address", "").lower() and city not in area:
             continue
 
-        if keyword in name or any(keyword in a for a in aliases):
+        # 按品类搜索 或 按名称/alias搜索
+        match = False
+        if search_by_cuisine:
+            if keyword in cuisine:
+                match = True
+        else:
+            if keyword in name or any(keyword in a for a in aliases):
+                match = True
+
+        if match:
             results.append(shop)
     return results
 
@@ -198,9 +208,10 @@ def _resolve_time(args_virtual_time: str | None) -> datetime:
 def cmd_search(args: argparse.Namespace) -> None:
     data = _load_data()
     city = (args.city or "").strip()
+    search_by_cuisine = getattr(args, "cuisine", False)
 
     results = []
-    for shop in _search_shops(data, args.name, city):
+    for shop in _search_shops(data, args.name, city, search_by_cuisine):
         f = shop["fields"]
         results.append({
             "id": shop["id"],
@@ -229,9 +240,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     opentime = f.get("opentime_today", "10:00-22:00")
 
     # 判断是否在营业时间内
-    from mocks.state_machine import BaseStateMachine
-    dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-    is_open = dummy.is_open_at(t, opentime)
+    is_open = BaseStateMachine.is_open_at(t, opentime)
 
     if not is_open:
         _out({
@@ -299,9 +308,7 @@ def cmd_watch(args: argparse.Namespace) -> None:
             f = shop["fields"]
             opentime = f.get("opentime_today", "10:00-22:00")
 
-            from mocks.state_machine import BaseStateMachine
-            dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-            if not dummy.is_open_at(t, opentime):
+            if not BaseStateMachine.is_open_at(t, opentime):
                 continue
 
             queue = _get_queue(data, sid, t)
@@ -340,9 +347,7 @@ def cmd_take_number(args: argparse.Namespace) -> None:
     f = shop["fields"]
     opentime = f.get("opentime_today", "10:00-22:00")
 
-    from mocks.state_machine import BaseStateMachine
-    dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-    is_open = dummy.is_open_at(t, opentime)
+    is_open = BaseStateMachine.is_open_at(t, opentime)
 
     queue = _get_queue(data, args.shop_id, t) if is_open else 0
     people = int(args.people)
@@ -397,9 +402,7 @@ def cmd_quick_take(args: argparse.Namespace) -> None:
     f = shop["fields"]
     opentime = f.get("opentime_today", "10:00-22:00")
 
-    from mocks.state_machine import BaseStateMachine
-    dummy = type("_", (BaseStateMachine,), {"state_at": lambda s, t: 0})()
-    is_open = dummy.is_open_at(t, opentime)
+    is_open = BaseStateMachine.is_open_at(t, opentime)
 
     queue = (
         _fallback_queue(args.name, t)
@@ -438,6 +441,78 @@ def cmd_quick_take(args: argparse.Namespace) -> None:
     })
 
 
+# ——— 子命令：auto-queue ———
+
+def cmd_auto_queue(args: argparse.Namespace) -> None:
+    """
+    自动搜索并全排所有符合要求的餐厅，返回所有餐厅信息以及哪个餐厅排得最快的预测。
+    """
+    data = _load_data()
+    t = _resolve_time(args.virtual_time)
+    people = int(args.people)
+    if people <= 0:
+        _fatal("用餐人数必须大于 0")
+
+    # 搜索所有符合要求的餐厅
+    shops = _search_shops(data, args.keyword, args.city or "北京", args.cuisine)
+
+    if not shops:
+        # 如果没找到，尝试 Mock 一个
+        shop = _fallback_shop(args.keyword)
+        shops = [shop]
+
+    # 为每个餐厅生成取号信息
+    queue_results = []
+    for shop in shops:
+        shop_id = shop["id"]
+        f = shop["fields"]
+        opentime = f.get("opentime_today", "10:00-22:00")
+
+        is_open = BaseStateMachine.is_open_at(t, opentime)
+
+        queue = _get_queue(data, shop_id, t) if is_open else 0
+        eta = _eta_minutes(queue)
+        area_prefix = {
+            "望京": "WJ", "三里屯": "SLT", "国贸": "GM",
+        }.get(f.get("business_area", ""), "BJ")
+        table_num = f"{area_prefix}-{(queue * 3 + people * 7) % 9000 + 1000:04d}"
+
+        queue_results.append({
+            "shop_id": shop_id,
+            "name": shop["name"],
+            "cuisine": f.get("cuisine", ""),
+            "address": f.get("address", ""),
+            "business_area": f.get("business_area", ""),
+            "tableNumDesc": table_num,
+            "queueWaitTableNum": queue,
+            "eta_minutes": eta,
+            "is_open": is_open,
+            "rating": f.get("rating", 0),
+            "cost_per_person": f.get("cost_per_person", 0),
+        })
+
+    # 找出排队最少/最快的餐厅
+    # 优先找营业中且排队最少的
+    open_shops = [r for r in queue_results if r["is_open"]]
+    if open_shops:
+        # 按排队数排序，最少的在前
+        open_shops_sorted = sorted(open_shops, key=lambda x: x["queueWaitTableNum"])
+        fastest = open_shops_sorted[0]
+    else:
+        # 如果都没开门，随便选一个
+        fastest = queue_results[0]
+
+    _out({
+        "success": True,
+        "keyword": args.keyword,
+        "search_by_cuisine": args.cuisine,
+        "total_shops": len(queue_results),
+        "shops": queue_results,
+        "fastest_shop": fastest,
+        "virtual_time": t.isoformat(),
+    })
+
+
 # ——— CLI 入口 ———
 
 def main() -> None:
@@ -449,8 +524,9 @@ def main() -> None:
 
     # search
     p_search = sub.add_parser("search", help="搜索店铺")
-    p_search.add_argument("--name", required=True, help="店名关键词")
+    p_search.add_argument("--name", required=True, help="店名/品类关键词")
     p_search.add_argument("--city", default="北京", help="城市（默认北京）")
+    p_search.add_argument("--cuisine", action="store_true", help="按品类搜索而非按店名搜索")
 
     # status
     p_status = sub.add_parser("status", help="查单店排队状态")
@@ -487,6 +563,14 @@ def main() -> None:
     p_quick.add_argument("--virtual-time", default=None, dest="virtual_time")
     p_quick.add_argument("--user-location", default=None, dest="user_location")
 
+    # auto-queue
+    p_auto = sub.add_parser("auto-queue", help="自动搜索并全排所有符合要求的餐厅")
+    p_auto.add_argument("--keyword", required=True, help="店名/品类/商圈关键词")
+    p_auto.add_argument("--city", default="北京", help="城市（默认北京）")
+    p_auto.add_argument("--cuisine", action="store_true", help="按品类搜索而非按店名搜索")
+    p_auto.add_argument("--people", type=int, default=2, help="用餐人数，默认 2")
+    p_auto.add_argument("--virtual-time", default=None, dest="virtual_time")
+
     args = parser.parse_args()
 
     dispatch = {
@@ -495,6 +579,7 @@ def main() -> None:
         "watch": cmd_watch,
         "take-number": cmd_take_number,
         "quick-take": cmd_quick_take,
+        "auto-queue": cmd_auto_queue,
     }
     dispatch[args.command](args)
 

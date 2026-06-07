@@ -46,9 +46,15 @@ class BaseStateMachine(ABC):
         """返回时刻 t 对应的状态值（如排队桌数）。"""
         ...
 
-    def is_open_at(self, t: datetime, opentime: str) -> bool:
+    @staticmethod
+    def is_open_at(t: datetime, opentime: str) -> bool:
         """
         根据营业时间字符串判断餐厅是否开放取号。
+
+        营业时间只取决于 opentime 字符串 + 虚拟时间 t，与排队/库存等状态机
+        状态无关，故声明为 @staticmethod —— 可直接 BaseStateMachine.is_open_at(t,
+        opentime) 调用，无需构造任何状态机实例（实例调用 machine.is_open_at(...)
+        仍向后兼容）。
         opentime 格式: "11:00-14:00,17:00-22:00" 或 "11:00-22:00"
         """
         hour_min = t.hour + t.minute / 60
