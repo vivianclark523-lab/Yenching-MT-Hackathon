@@ -43,6 +43,7 @@ COUPONS_FILE = MOCKS_DIR / "coupons.json"
 
 HOT_CUISINE_KEYWORDS = ("火锅", "羊蝎子")
 LOCAL_TAGS = ("当地特色", "北京菜", "京味家常菜", "面食")
+NON_STANDALONE_RECOMMEND_CATEGORIES = {"饮品", "小吃", "火锅配菜"}
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -58,8 +59,7 @@ def _items_by_id(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _money(cents: int | float | None) -> str:
     if cents is None:
         return "未知"
-    yuan = int(round(float(cents) / 100))
-    return f"¥{yuan}"
+    return f"¥{float(cents) / 100:.2f}"
 
 
 def _out(obj: Any) -> None:
@@ -155,6 +155,9 @@ class MealContext:
 
     def dish_by_id(self, dish_id: str) -> dict[str, Any] | None:
         return next((dish for dish in self.dishes if dish["id"] == dish_id), None)
+
+    def is_standalone_recommend_dish(self, dish: dict[str, Any]) -> bool:
+        return dish.get("fields", {}).get("category", "") not in NON_STANDALONE_RECOMMEND_CATEGORIES
 
     def restaurant_for_dish(self, dish: dict[str, Any]) -> dict[str, Any]:
         shop_id = dish["fields"]["shop_id"]
@@ -309,6 +312,7 @@ class MealContext:
         rows = [
             self.candidate_for_dish(dish, now, weather, budget_cents, strict_busy, category)
             for dish in self.dishes
+            if self.is_standalone_recommend_dish(dish)
         ]
         return sorted(
             [row for row in rows if not row["hard_blocks"]],
@@ -326,6 +330,7 @@ class MealContext:
         rows = [
             self.candidate_for_dish(dish, now, weather, budget_cents, True, category)
             for dish in self.dishes
+            if self.is_standalone_recommend_dish(dish)
         ]
         return [row for row in rows if row["hard_blocks"]]
 
