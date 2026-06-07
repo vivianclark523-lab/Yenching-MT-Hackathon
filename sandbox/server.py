@@ -53,17 +53,30 @@ DEMO_BASELINE = "2026-06-07T18:00:00+08:00"
 # Skill 1 排队面板的 demo 店（海底捞主角 + 费大厨 + 蜀大侠，均为 monotonic_decay 有速度）
 DEMO_QUEUE_SHOPS = ["shop-001", "shop-024", "shop-012"]
 
-# Skill 3 demo 行程：从"出发=当前虚拟时钟"起，按 leg(路程)+dwell(停留) 累计推每站到达时刻，
+# Skill 3 demo 行程预设：每个 = 一条可在面板里切换的行程（评委用「选预设」下拉切换）。
+# 从"出发=当前虚拟时钟"起，按 leg(路程)+dwell(停留) 累计推每站到达时刻，
 # 每站在它自己的到达时刻查 business_context（排队/券/余票）。poi 直接用 shop_id（便于复用排队速度表）。
-DEMO_ITINERARY = [
-    {"label": "🍲 晚饭 · 海底捞·望京", "poi": "shop-001", "kind": "dining", "leg": 0, "dwell": 75},
-    {"label": "🎬 电影 · 嘉禾望京影院", "poi": "cinema-001", "kind": "cinema", "leg": 15, "dwell": 130},
-    {"label": "🌙 宵夜 · 叫了个炸鸡", "poi": "shop-031", "kind": "dining", "leg": 15, "dwell": 45},
+ITINERARY_PRESETS = [
+    {"key": "evening", "label": "🍲 今晚·火锅+电影+宵夜", "stops": [
+        {"label": "🍲 晚饭 · 海底捞·望京", "poi": "shop-001", "kind": "dining", "leg": 0, "dwell": 75},
+        {"label": "🎬 电影 · 嘉禾望京影院", "poi": "cinema-001", "kind": "cinema", "leg": 15, "dwell": 130},
+        {"label": "🌙 宵夜 · 叫了个炸鸡", "poi": "shop-031", "kind": "dining", "leg": 15, "dwell": 45},
+    ]},
+    {"key": "lunch-pork", "label": "🍛 午间·猪脚饭+下午场电影", "stops": [
+        {"label": "🍛 午饭 · 隆江猪脚饭·望京", "poi": "shop-028", "kind": "dining", "leg": 0, "dwell": 40},
+        {"label": "🎬 下午场 · 嘉禾望京影院", "poi": "cinema-001", "kind": "cinema", "leg": 12, "dwell": 120},
+    ]},
+    {"key": "quick", "label": "🔥 简版·火锅一站", "stops": [
+        {"label": "🍲 晚饭 · 海底捞·望京", "poi": "shop-001", "kind": "dining", "leg": 0, "dwell": 75},
+    ]},
 ]
+DEMO_ITINERARY = ITINERARY_PRESETS[0]["stops"]   # 向后兼容：默认行程 = 第一个预设
 
-# 意图层控件的默认值（前端不传时用）。weather 驱动采购补货清单（grocery）；shops 决定排队面板盯哪几家。
+# 意图层控件的默认值（前端不传时用）。weather 驱动采购补货清单（grocery）；shops 决定排队面板盯哪几家；
+# itinerary 决定 Skill3 面板跑哪条预设行程。
 CONTROL_DEFAULTS = {"want": "猪脚饭", "member": "1", "objective": "O3", "budget": "", "rating_floor": "4.2",
-                    "weather": "hot", "shops": ",".join(DEMO_QUEUE_SHOPS)}
+                    "weather": "hot", "shops": ",".join(DEMO_QUEUE_SHOPS),
+                    "itinerary": ITINERARY_PRESETS[0]["key"]}
 
 # 场景预设：每个 = 一键设好"整个世界态"(时钟 + 会员 + 想吃 + 目标)。取代旧的 4 个纯时间书签。
 SCENARIO_PRESETS = [
@@ -200,14 +213,16 @@ def _enrich_queue(item: dict, rates: dict[str, float], now_iso: str) -> dict:
 
 # ---------- Skill 3 行程：每站在到达时刻查 business_context（排队×券×票务的串联）----------
 
-def build_itinerary(start_iso: str, rates: dict[str, float]) -> dict:
+def build_itinerary(start_iso: str, rates: dict[str, float],
+                    plan: list[dict] | None = None, label: str = "") -> dict:
+    plan = plan if plan is not None else DEMO_ITINERARY
     try:
         start = datetime.fromisoformat(start_iso)
     except Exception:
         start = datetime.now(TZ_BEIJING)
     stops = []
     cursor = 0
-    for s in DEMO_ITINERARY:
+    for s in plan:
         cursor += s["leg"]
         arrive = start + timedelta(minutes=cursor)
         # 餐厅排队：在"到达时刻"求值（到店才排队）；电影票：在"当前时刻"求值（票是现在订的，演余票递减/手慢无）
@@ -231,7 +246,7 @@ def build_itinerary(start_iso: str, rates: dict[str, float]) -> dict:
             stop["seated_at"] = (arrive + timedelta(minutes=mins)).strftime("%H:%M")
         cursor += s["dwell"]
         stops.append(stop)
-    return {"start": start.strftime("%H:%M"), "stops": stops}
+    return {"start": start.strftime("%H:%M"), "label": label, "stops": stops}
 
 
 # ---------- 聚合各 Skill 在当前虚拟时刻 + 当前控件设定下的状态 ----------
@@ -259,6 +274,9 @@ def build_state(controls: dict) -> dict:
     queue = [_enrich_queue(_run_skill(QUEUE_CTX, ["status", "--shop-id", sid, "--virtual-time", t]), rates, t)
              for sid in shop_ids]
 
+    itin_key = controls.get("itinerary") or ITINERARY_PRESETS[0]["key"]
+    preset = next((p for p in ITINERARY_PRESETS if p["key"] == itin_key), ITINERARY_PRESETS[0])
+
     return {
         "virtual_time": t,
         "clock": read_clock(),
@@ -267,7 +285,7 @@ def build_state(controls: dict) -> dict:
         "skill2_deal": deal.get("data") if isinstance(deal, dict) and "data" in deal else deal,
         "skill2_grocery": grocery.get("data") if isinstance(grocery, dict) and "data" in grocery else grocery,
         "pushes": scan.get("pushes", []) if isinstance(scan, dict) else [],
-        "skill3_itinerary": build_itinerary(t, rates),
+        "skill3_itinerary": build_itinerary(t, rates, preset["stops"], preset["label"]),
     }
 
 
@@ -293,7 +311,9 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/clock":
             return self._send(200, {"clock": read_clock(), "baseline": DEMO_BASELINE,
                                     "presets": SCENARIO_PRESETS, "all_shops": _all_shops(),
-                                    "default_shops": DEMO_QUEUE_SHOPS})
+                                    "default_shops": DEMO_QUEUE_SHOPS,
+                                    "itineraries": [{"key": p["key"], "label": p["label"]}
+                                                    for p in ITINERARY_PRESETS]})
         if u.path == "/api/state":
             q = parse_qs(u.query)
             controls = {k: (q[k][0] if k in q else v) for k, v in CONTROL_DEFAULTS.items()}
