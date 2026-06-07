@@ -156,6 +156,12 @@
       <div class="hint">勾选的店进入下方「排队速度 / 取号 ETA」面板；可临场加店、减店</div>
     </div>
 
+    <div class="grp">
+      <h3>🗺️ 今晚行程（Skill 3 · 选预设）</h3>
+      <select id="itinerarySel" onchange="setItinerary(this.value)"></select>
+      <div class="hint">切换下方「今晚行程」面板跑哪条路线；每站到达时刻随时钟漂移</div>
+    </div>
+
     <details class="grp" id="advDrawer">
       <summary style="cursor:pointer;font-size:12px;color:var(--mut);font-weight:600">⚙️ 高级调参 · 覆盖层（评委亲手拧）</summary>
       <div style="margin-top:10px">
@@ -212,8 +218,9 @@ const hhmm = iso => (iso||"").slice(0,16).replace("T"," ");
 const api = async (p, o) => (await fetch(p, o)).json();
 
 const WANT_TAGS = ["猪脚饭", "火锅", "快餐", "麻辣烫", "家常小炒", "轻食", "茶饮", "甜点"];
-let controls = { want:"猪脚饭", member:true, objective:"O3", budget:"", rating_floor:"4.2", weather:"hot", shops:[] };
+let controls = { want:"猪脚饭", member:true, objective:"O3", budget:"", rating_floor:"4.2", weather:"hot", shops:[], itinerary:"" };
 let allShops = [];      // 全店清单（/api/clock 注入），供「盯哪几家店」多选
+let itineraries = [];   // 行程预设清单（/api/clock 注入），供「选预设」下拉
 let prev = null;        // 上一次 state，用于 diff/高亮/因果
 let lastAction = "";    // 人类动作标签
 let baseline = "2026-06-07T18:00:00+08:00";
@@ -225,7 +232,7 @@ const isoFromMin = m => `${demoDate()}T${String(Math.floor(m/60)).padStart(2,'0'
 function qs(){
   return new URLSearchParams({ want:controls.want, member:controls.member?1:0,
     objective:controls.objective, budget:controls.budget, rating_floor:controls.rating_floor,
-    weather:controls.weather, shops:controls.shops.join(",") }).toString();
+    weather:controls.weather, shops:controls.shops.join(","), itinerary:controls.itinerary }).toString();
 }
 
 // ---- 控件动作（都先记 lastAction，再刷新）----
@@ -294,6 +301,7 @@ function renderControls(){
   $("#objO1").className = controls.objective==="O1"?"on":"";
   document.querySelectorAll("#weatherSeg button").forEach(b=>b.className = b.dataset.w===controls.weather?"on":"");
   renderShopPicker();
+  renderItineraries();
 }
 function renderShopPicker(){
   const box = $("#shopPicker"); if(!box) return;
@@ -310,6 +318,18 @@ function toggleShop(id){
   else controls.shops.push(id);
   lastAction = "改盯店清单";
   renderShopPicker(); load();
+}
+function renderItineraries(){
+  const sel = $("#itinerarySel"); if(!sel) return;
+  if(!itineraries.length){ sel.innerHTML = `<option value="">默认行程</option>`; return; }
+  sel.innerHTML = itineraries.map(it=>`<option value="${esc(it.key)}">${esc(it.label)}</option>`).join("");
+  sel.value = controls.itinerary || itineraries[0].key;
+}
+function setItinerary(key){
+  if(key===controls.itinerary) return;
+  const lbl = (itineraries.find(it=>it.key===key)||{}).label || key;
+  lastAction = `切行程 → ${lbl}`;
+  controls.itinerary = key; load();
 }
 function renderCause(s){
   const el=$("#cause");
@@ -391,7 +411,7 @@ function renderQueue(s){
 }
 function renderTrip(s){
   const it=s.skill3_itinerary, el=$("#trip");
-  $("#tripStart").textContent = it&&it.start?`（出发 ${it.start}）`:"";
+  $("#tripStart").textContent = it&&it.start?`（${it.label?it.label+" · ":""}出发 ${it.start}）`:"";
   if(!it||!it.stops||!it.stops.length){ el.innerHTML=`<div class="empty">无行程</div>`; return; }
   const pmap={}; ((prev&&prev.skill3_itinerary&&prev.skill3_itinerary.stops)||[]).forEach(p=>pmap[p.label]=p);
   const cards = it.stops.map(st=>{
@@ -456,7 +476,8 @@ async function load(){
 
 (async ()=>{ const c=await api("/api/clock"); baseline=c.baseline||baseline; presets=c.presets||[];
   allShops = c.all_shops||[]; if(!controls.shops.length) controls.shops = (c.default_shops||[]).slice();
-  renderPresets(); renderShopPicker(); await loadOverrides(); await load(); })();
+  itineraries = c.itineraries||[]; if(!controls.itinerary) controls.itinerary = (itineraries[0]&&itineraries[0].key)||"";
+  renderPresets(); renderShopPicker(); renderItineraries(); await loadOverrides(); await load(); })();
 </script>
 </body>
 </html>
