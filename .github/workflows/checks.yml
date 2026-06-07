@@ -45,9 +45,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: pip install -q pytest 2>/dev/null || true
-
       - name: Run coupon engine tests
         run: |
           result=$(python3 tests/test_coupon_engine.py 2>&1)
