@@ -59,7 +59,9 @@ def _items_by_id(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _money(cents: int | float | None) -> str:
     if cents is None:
         return "未知"
-    return f"¥{float(cents) / 100:.2f}"
+    yuan = float(cents) / 100
+    # 保留分位精度，但去掉无意义的尾随零：12.00→¥12，7.20→¥7.2，19.40→¥19.4
+    return "¥" + f"{yuan:.2f}".rstrip("0").rstrip(".")
 
 
 def _out(obj: Any) -> None:

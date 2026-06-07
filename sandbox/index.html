@@ -108,10 +108,11 @@
       </div>
       <div class="rowx" style="margin-top:6px"><input type="datetime-local" id="dt" step="60"><button onclick="setFromInput()">设定</button></div>
       <div class="rowx" style="margin-top:6px">
-        <button class="bk" onclick="jump('2026-06-07T12:05:00+08:00','午市神券激活')">神券12:05</button>
-        <button class="bk" onclick="jump('2026-06-07T12:30:00+08:00','神券秒空')">秒空12:30</button>
-        <button class="bk" onclick="jump('2026-06-07T18:25:00+08:00','晚高峰')">高峰18:25</button>
-        <button class="bk" onclick="jump('2026-06-07T21:30:00+08:00','夜宵')">夜宵21:30</button>
+        <button class="bk" onclick="jump('2026-06-07T15:00:00+08:00','一日游开场')">一日游15:00</button>
+        <button class="bk" onclick="jump('2026-06-07T18:25:00+08:00','海底捞跳号')">跳号18:25</button>
+        <button class="bk" onclick="jump('2026-06-07T18:40:00+08:00','凑凑放空·铁律')">换店18:40</button>
+        <button class="bk" onclick="jump('2026-06-07T18:50:00+08:00','取号')">取号18:50</button>
+        <button class="bk" onclick="jump('2026-06-07T21:00:00+08:00','猫粮采购')">猫粮21:00</button>
       </div>
       <button class="reset" onclick="resetBaseline()">↻ 复位到 demo 基线 (18:00)</button>
     </div>
@@ -159,7 +160,7 @@
     <div class="grp">
       <h3>🗺️ 今晚行程（Skill 3 · 选预设）</h3>
       <select id="itinerarySel" onchange="setItinerary(this.value)"></select>
-      <div class="hint">切换下方「今晚行程」面板跑哪条路线；每站到达时刻随时钟漂移</div>
+      <div class="hint">切换下方「今晚行程」跑哪条路线；每站为固定计划时刻，电影余票随时钟变化</div>
     </div>
 
     <details class="grp" id="advDrawer">
@@ -205,7 +206,7 @@
     </section>
 
     <section class="panel">
-      <h2>🗺️ Skill 3 · 今晚行程（沿途排队×券×余票，随时钟漂移）<span class="mut small" id="tripStart"></span></h2>
+      <h2>🗺️ Skill 3 · 今晚行程（固定计划时刻 · 到店排队预测 + 电影余票随时钟变化）<span class="mut small" id="tripStart"></span></h2>
       <div id="trip"></div>
     </section>
   </main>
@@ -218,7 +219,7 @@ const hhmm = iso => (iso||"").slice(0,16).replace("T"," ");
 const api = async (p, o) => (await fetch(p, o)).json();
 
 const WANT_TAGS = ["猪脚饭", "火锅", "快餐", "麻辣烫", "家常小炒", "轻食", "茶饮", "甜点"];
-let controls = { want:"猪脚饭", member:true, objective:"O3", budget:"", rating_floor:"4.2", weather:"hot", shops:[], itinerary:"" };
+let controls = { want:"茶饮", member:true, objective:"O3", budget:"", rating_floor:"4.2", weather:"hot", shops:[], itinerary:"" };
 let allShops = [];      // 全店清单（/api/clock 注入），供「盯哪几家店」多选
 let itineraries = [];   // 行程预设清单（/api/clock 注入），供「选预设」下拉
 let prev = null;        // 上一次 state，用于 diff/高亮/因果
@@ -321,7 +322,7 @@ function toggleShop(id){
 }
 function renderItineraries(){
   const sel = $("#itinerarySel"); if(!sel) return;
-  if(!itineraries.length){ sel.innerHTML = `<option value="">默认行程</option>`; return; }
+  if(!itineraries.length){ sel.innerHTML = `<option value="">默认行程（server 是旧进程？Ctrl-C 重启 python3 sandbox/server.py）</option>`; return; }
   sel.innerHTML = itineraries.map(it=>`<option value="${esc(it.key)}">${esc(it.label)}</option>`).join("");
   sel.value = controls.itinerary || itineraries[0].key;
 }
@@ -411,7 +412,7 @@ function renderQueue(s){
 }
 function renderTrip(s){
   const it=s.skill3_itinerary, el=$("#trip");
-  $("#tripStart").textContent = it&&it.start?`（${it.label?it.label+" · ":""}出发 ${it.start}）`:"";
+  $("#tripStart").textContent = it&&it.start?`（${it.label?it.label+" · ":""}首站 ${it.start}）`:"";
   if(!it||!it.stops||!it.stops.length){ el.innerHTML=`<div class="empty">无行程</div>`; return; }
   const pmap={}; ((prev&&prev.skill3_itinerary&&prev.skill3_itinerary.stops)||[]).forEach(p=>pmap[p.label]=p);
   const cards = it.stops.map(st=>{
@@ -421,10 +422,12 @@ function renderTrip(s){
       const tl=st.ticket_left, fl=(pst&&pst.ticket_left!==tl)?"flash":"";
       meta = tl==null ? '<span class="mut">—</span>'
            : (tl>0 ? `🎫 余票 <b class="tk-ok ${fl}">${tl}</b> 张` : '🎫 <span class="tk-bad">已售罄</span>');
-    } else {
+    } else if(st.kind==="dining"){
       const q=st.queue_tables, fl=(pst&&pst.queue_tables!==q)?"flash":"";
       meta = `🍽️ <b class="${fl}">${q??'—'}</b> 桌${st.seated_at?` · 🪑${st.seated_at}入座`:''}`;
       if(st.coupon) meta += `<br>🎟️ <span class="tk-ok">${esc(st.coupon)}</span>`;
+    } else {
+      meta = `<span class="mut">${esc(st.note||'—')}</span>`;
     }
     return `<div class="stop"><div class="when">${esc(st.arrive_at)}</div><div class="lbl">${esc(st.label)}</div><div class="meta">${meta}</div></div>`;
   });
