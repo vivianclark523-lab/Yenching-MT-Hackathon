@@ -5,7 +5,7 @@
   "items": [
     {
       "id": "profile-001",
-      "name": "Lilian 默认画像",
+      "name": "Ray 默认画像",
       "fields": {
         "home_area": "望京",
         "default_budget_cents": 4500,
@@ -14,7 +14,7 @@
         "chain_preference": "medium_high",
         "prepared_food_sensitivity": "high",
         "dine_in_priority": "low_for_takeout",
-        "preferred_cuisines": ["川菜", "酸菜鱼", "湘菜", "面食", "北京菜"],
+        "preferred_cuisines": ["火锅", "面食", "家常小炒", "快餐", "北京菜"],
         "avoid_cuisines": ["重油火锅连续两天", "预制菜风险高"],
         "delivery_address": "望京 SOHO 附近",
         "usual_meal_times": ["12:10", "18:40"],
