@@ -122,7 +122,9 @@ class Catalog:
         return sorted(did for did, d in self.dishes.items() if d["shop_id"] == shop_id)
 
     def find_dishes(self, keyword: str) -> list[str]:
-        """按核心品类/菜名搜菜：名称含 keyword 或品类等于 keyword。供意图层做跨店比价。"""
+        """按核心品类/菜名搜菜：名称含 keyword 或品类==keyword。供意图层做跨店比价。
+        同义词归一(奶茶→茶饮、甜品/蛋糕→甜点)由 SKILL.md 的意图层做，不在此做模糊 cuisine 匹配
+        （否则会把同店的饮料/小吃等配菜误当主品类候选）。"""
         kw = keyword.strip()
         return sorted(
             did for did, d in self.dishes.items()

@@ -221,6 +221,8 @@ python3 skills/meal-grocery-assistant/scripts/meal_context.py recommend \
 python3 skills/meal-grocery-assistant/scripts/meal_context.py deal --want "猪脚饭"
 ```
 
+`--want` 传**核心品类词**(脚本按品类/菜名匹配)。当前支持跨店比价的品类:**猪脚饭 / 火锅 / 快餐 / 麻辣烫 / 面 / 家常小炒 / 轻食 / 茶饮 / 甜点**。用户口语**先归一到这些词再传**:奶茶/果茶/茶饮店 → `茶饮`;甜品/蛋糕/糕点 → `甜点`;盖饭/小炒/炒菜 → `家常小炒`;沙拉/减脂餐 → `轻食`。匹配不到时脚本返回"没找到",据此让用户换个说法。
+
 > ⚠️ **所有价格、用券、券后实付、是否达标都来自脚本 JSON，严禁自己口算或编造**。你只负责把 JSON 渲染成话术。
 
 读 `data` 渲染：

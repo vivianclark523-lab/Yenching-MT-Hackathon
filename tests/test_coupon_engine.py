@@ -312,6 +312,53 @@ def test_v_lightfood_quality():
           str([r["shop_id"] for r in d["cheaper_but_risky"]]))
 
 
+# ── Test W: 茶饮(奶茶)· cuisine 匹配 + floor surface ──────────────────
+def test_w_tea_drinks():
+    import io
+    import contextlib
+    import types
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "meal-grocery-assistant" / "scripts"))
+    import meal_context as mc  # noqa: E402
+    from mocks.clock import reset_virtual_time
+
+    check("W 茶饮品类命中4款(category 匹配)",
+          set(CATALOG.find_dishes("茶饮")) == {"dish-049", "dish-050", "dish-051", "dish-052"},
+          str(CATALOG.find_dishes("茶饮")))
+    args = types.SimpleNamespace(want="茶饮", objective="O3", budget_yuan=None,
+                                 rating_floor=4.2, member=True, virtual_time="2026-06-07T15:00:00+08:00")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        mc.cmd_deal(args)
+    reset_virtual_time()
+    d = json.loads(buf.getvalue())["data"]
+    check("W 奶茶比价覆盖3家", len({c["shop_id"] for c in d["comparison"]}) == 3, str(len(d["comparison"])))
+    check("W 蜜雪(4.0)被 surface 踩雷",
+          "shop-044" in {r["shop_id"] for r in d["cheaper_but_risky"]},
+          str([r["shop_id"] for r in d["cheaper_but_risky"]]))
+
+
+# ── Test X: 甜点 · 默认达标最便宜 + 4.0 档口 surface ───────────────────
+def test_x_dessert():
+    import io
+    import contextlib
+    import types
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "meal-grocery-assistant" / "scripts"))
+    import meal_context as mc  # noqa: E402
+    from mocks.clock import reset_virtual_time
+
+    args = types.SimpleNamespace(want="甜点", objective="O3", budget_yuan=None,
+                                 rating_floor=4.2, member=True, virtual_time="2026-06-07T15:00:00+08:00")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        mc.cmd_deal(args)
+    reset_virtual_time()
+    d = json.loads(buf.getvalue())["data"]
+    check("X 甜点默认幸福西饼(达标最便宜)", d["default"]["shop_id"] == "shop-045", d["default"]["shop_id"])
+    check("X 甜啦啦(4.0)被 surface 踩雷",
+          "shop-047" in {r["shop_id"] for r in d["cheaper_but_risky"]},
+          str([r["shop_id"] for r in d["cheaper_but_risky"]]))
+
+
 def main() -> None:
     tests = [test_a_stacking, test_b_addon_unlocks_shenquan, test_c_time_before_shenquan,
              test_d_stock_sold_out, test_e_reproducible, test_f_member_condition,
@@ -320,7 +367,8 @@ def main() -> None:
              test_n_time_lever_wait, test_o_time_lever_order_now, test_p_time_lever_neutral,
              test_q_expiring_coupons, test_r_scan_proactive,
              test_s_hotpot_cross_shop, test_t_kuaican_deal,
-             test_u_new_customer, test_v_lightfood_quality]
+             test_u_new_customer, test_v_lightfood_quality,
+             test_w_tea_drinks, test_x_dessert]
     for fn in tests:
         print(f"\n[{fn.__name__}]")
         fn()
