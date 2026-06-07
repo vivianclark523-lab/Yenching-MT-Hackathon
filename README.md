@@ -16,7 +16,7 @@
 | 团队 | Vivian (lead) / Lilian / Ray |
 | 时间窗 | 5/31 – 6/7 |
 | 当前阶段 | W1 本地开发，决赛后再上云 |
-| 必交付 | 3 个 Skill + Demo 视频 + GitHub Pages 管理台 + 源码 + 文档 |
+| 必交付 | 3 个 Skill + Demo 视频 + 沙盒控制台（本地 `sandbox/`）+ 源码 + 文档（GitHub Pages 上云：决赛后）|
 
 3 个 Skill：
 1. **多店并行排队管家** (`watch-restaurant-queues`) —— Ray 主导
@@ -63,8 +63,6 @@
 │   ├── skills-conventions.md          ← Skill 写作规范
 │   ├── team-workflow.md               ← Git / CI / 协作流程
 │   └── demo-script.md                 ← Demo 完整剧本（W1 后期补）
-├── submission/                        ← 最终提交包（W1 末期产出）
-├── management/                        ← GitHub Pages 静态首页
 ├── _local/                            ← 本地参考（.gitignore，不入库）
 │   ├── mt-paotui/                     ← 美团官方跑腿 Skill 参考
 │   └── dianping-queue-skill/          ← 第三方排队 Skill 参考
@@ -312,7 +310,7 @@ python3 sandbox/server.py          # 默认端口 8765，可加 --port 改
 W1 收尾时把以下评委 facing 内容补到本 README 顶部（或拆为 `docs/for-judges.md`）：
 
 - [ ] 项目 tagline + 一句话产品介绍（替评委 30 秒抓住）
-- [ ] 快速链接表（demo 视频 / 飞书群 / 管理台首页）
+- [ ] 快速链接表（demo 视频 / 飞书群 / 沙盒控制台）
 - [ ] 命题理解 + 我们对"服务找人"哲学的回答（含冯岩原话引子）
 - [ ] 3 个 Skill 速览表（评分维度对应）
 - [ ] 真数据 vs Mock 数据划分说明（让评委放心 Mock 是合理的）
