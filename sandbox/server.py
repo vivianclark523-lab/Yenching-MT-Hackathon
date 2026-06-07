@@ -61,9 +61,9 @@ DEMO_ITINERARY = [
     {"label": "🌙 宵夜 · 叫了个炸鸡", "poi": "shop-031", "kind": "dining", "leg": 15, "dwell": 45},
 ]
 
-# 意图层控件的默认值（前端不传时用）。weather 驱动采购补货清单（grocery）。
+# 意图层控件的默认值（前端不传时用）。weather 驱动采购补货清单（grocery）；shops 决定排队面板盯哪几家。
 CONTROL_DEFAULTS = {"want": "猪脚饭", "member": "1", "objective": "O3", "budget": "", "rating_floor": "4.2",
-                    "weather": "hot"}
+                    "weather": "hot", "shops": ",".join(DEMO_QUEUE_SHOPS)}
 
 # 场景预设：每个 = 一键设好"整个世界态"(时钟 + 会员 + 想吃 + 目标)。取代旧的 4 个纯时间书签。
 SCENARIO_PRESETS = [
@@ -102,6 +102,16 @@ def _shop_names() -> dict[str, str]:
         return {it["id"]: it.get("name", it["id"]) for it in data.get("items", [])}
     except Exception:
         return {}
+
+
+def _all_shops() -> list[dict]:
+    """restaurants.json 全部餐厅(id/name/cuisine)，供前端「盯哪几家店」多选。"""
+    try:
+        data = json.loads(RESTAURANTS_FILE.read_text(encoding="utf-8"))
+        return [{"id": it["id"], "name": it.get("name", it["id"]),
+                 "cuisine": it.get("fields", {}).get("cuisine", "")} for it in data.get("items", [])]
+    except Exception:
+        return []
 
 
 def _run_skill(script: Path, args: list[str], timeout: int = 25) -> dict:
@@ -245,8 +255,9 @@ def build_state(controls: dict) -> dict:
     grocery = _run_skill(MEAL_CTX, ["grocery", "--virtual-time", t, "--weather", weather])
 
     rates = _shop_decay_rates()
+    shop_ids = [s for s in (controls.get("shops") or "").split(",") if s] or DEMO_QUEUE_SHOPS
     queue = [_enrich_queue(_run_skill(QUEUE_CTX, ["status", "--shop-id", sid, "--virtual-time", t]), rates, t)
-             for sid in DEMO_QUEUE_SHOPS]
+             for sid in shop_ids]
 
     return {
         "virtual_time": t,
@@ -281,7 +292,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, (SANDBOX_DIR / "index.html").read_bytes(), "text/html")
         if u.path == "/api/clock":
             return self._send(200, {"clock": read_clock(), "baseline": DEMO_BASELINE,
-                                    "presets": SCENARIO_PRESETS})
+                                    "presets": SCENARIO_PRESETS, "all_shops": _all_shops(),
+                                    "default_shops": DEMO_QUEUE_SHOPS})
         if u.path == "/api/state":
             q = parse_qs(u.query)
             controls = {k: (q[k][0] if k in q else v) for k, v in CONTROL_DEFAULTS.items()}

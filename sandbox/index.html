@@ -40,6 +40,12 @@
   .seg { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
   .seg button { border:0; border-radius:0; }
   .hint { font-size:11px; color:var(--mut); margin-top:5px; }
+  .shoplist { display:flex; flex-direction:column; gap:4px; max-height:168px; overflow-y:auto; }
+  .shopchip { display:flex; align-items:center; gap:7px; padding:5px 8px; border:1px solid var(--line);
+              border-radius:7px; cursor:pointer; font-size:12px; background:#222a38; }
+  .shopchip.on { border-color:var(--accent); background:#2b2410; }
+  .shopchip input { width:auto; margin:0; accent-color:var(--accent); cursor:pointer; }
+  .shopchip span:first-of-type { flex:1; }
 
   .cause { background:#1a1f17; border:1px solid var(--ok); border-radius:10px; padding:9px 12px;
            font-size:13px; margin-bottom:14px; min-height:20px; }
@@ -144,6 +150,12 @@
       <div class="hint">比价随这些实时重算；天气只影响下方「采购比价」的到期清单</div>
     </div>
 
+    <div class="grp">
+      <h3>🍲 盯哪几家店（Skill 1 排队）</h3>
+      <div id="shopPicker" class="shoplist"></div>
+      <div class="hint">勾选的店进入下方「排队速度 / 取号 ETA」面板；可临场加店、减店</div>
+    </div>
+
     <details class="grp" id="advDrawer">
       <summary style="cursor:pointer;font-size:12px;color:var(--mut);font-weight:600">⚙️ 高级调参 · 覆盖层（评委亲手拧）</summary>
       <div style="margin-top:10px">
@@ -200,7 +212,8 @@ const hhmm = iso => (iso||"").slice(0,16).replace("T"," ");
 const api = async (p, o) => (await fetch(p, o)).json();
 
 const WANT_TAGS = ["猪脚饭", "火锅", "快餐", "麻辣烫", "家常小炒", "轻食", "茶饮", "甜点"];
-let controls = { want:"猪脚饭", member:true, objective:"O3", budget:"", rating_floor:"4.2", weather:"hot" };
+let controls = { want:"猪脚饭", member:true, objective:"O3", budget:"", rating_floor:"4.2", weather:"hot", shops:[] };
+let allShops = [];      // 全店清单（/api/clock 注入），供「盯哪几家店」多选
 let prev = null;        // 上一次 state，用于 diff/高亮/因果
 let lastAction = "";    // 人类动作标签
 let baseline = "2026-06-07T18:00:00+08:00";
@@ -212,7 +225,7 @@ const isoFromMin = m => `${demoDate()}T${String(Math.floor(m/60)).padStart(2,'0'
 function qs(){
   return new URLSearchParams({ want:controls.want, member:controls.member?1:0,
     objective:controls.objective, budget:controls.budget, rating_floor:controls.rating_floor,
-    weather:controls.weather }).toString();
+    weather:controls.weather, shops:controls.shops.join(",") }).toString();
 }
 
 // ---- 控件动作（都先记 lastAction，再刷新）----
@@ -280,6 +293,23 @@ function renderControls(){
   $("#objO3").className = controls.objective==="O3"?"on":"";
   $("#objO1").className = controls.objective==="O1"?"on":"";
   document.querySelectorAll("#weatherSeg button").forEach(b=>b.className = b.dataset.w===controls.weather?"on":"");
+  renderShopPicker();
+}
+function renderShopPicker(){
+  const box = $("#shopPicker"); if(!box) return;
+  if(!allShops.length){ box.innerHTML = `<span class="small mut">加载中…</span>`; return; }
+  const sel = new Set(controls.shops);
+  box.innerHTML = allShops.map(s=>{
+    const on = sel.has(s.id);
+    return `<label class="shopchip ${on?'on':''}"><input type="checkbox" ${on?'checked':''} onchange="toggleShop('${s.id}')"><span>${esc(s.name)}</span><span class="small mut">${esc(s.cuisine||'')}</span></label>`;
+  }).join("");
+}
+function toggleShop(id){
+  const i = controls.shops.indexOf(id);
+  if(i>=0){ if(controls.shops.length<=1) return; controls.shops.splice(i,1); }  // 至少留 1 家
+  else controls.shops.push(id);
+  lastAction = "改盯店清单";
+  renderShopPicker(); load();
 }
 function renderCause(s){
   const el=$("#cause");
@@ -424,7 +454,9 @@ async function load(){
   prev = s;
 }
 
-(async ()=>{ const c=await api("/api/clock"); baseline=c.baseline||baseline; presets=c.presets||[]; renderPresets(); await loadOverrides(); await load(); })();
+(async ()=>{ const c=await api("/api/clock"); baseline=c.baseline||baseline; presets=c.presets||[];
+  allShops = c.all_shops||[]; if(!controls.shops.length) controls.shops = (c.default_shops||[]).slice();
+  renderPresets(); renderShopPicker(); await loadOverrides(); await load(); })();
 </script>
 </body>
 </html>
