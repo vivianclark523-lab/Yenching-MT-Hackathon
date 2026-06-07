@@ -34,6 +34,13 @@ if lsof -nP -i ":$PORT" >/dev/null 2>&1; then
   exit 1
 fi
 
+# 1.5) 复位「高级调参」覆盖层 —— 每次 demo 从干净状态开始（清掉上次注入的事件 / 改的速度），
+#      否则会出现"海底捞莫名多 12 桌"这类穿帮（覆盖层是给评委现场注入用的，不该带进基线）
+OVERRIDES="$HOME/.openclaw/sandbox/sandbox_overrides.json"
+mkdir -p "$(dirname "$OVERRIDES")"
+printf '{}\n' > "$OVERRIDES"
+echo "  • 高级调参覆盖层已复位（无注入事件 / 默认速度）"
+
 # 2) 后台起 server
 python3 sandbox/server.py --port "$PORT" >"$LOG" 2>&1 &
 echo "  • server 启动中（日志 $LOG）…"
