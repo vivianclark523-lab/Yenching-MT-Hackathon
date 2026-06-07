@@ -108,16 +108,34 @@ def _load(name):
 
 
 def _resolve(poi, items):
-    """把 poi（id 或店名/别名）解析成 items 里的条目，找不到返回 None。"""
+    """把 poi（id 或店名/别名）解析成条目；多候选时拒绝猜测。"""
+    query = str(poi).strip()
+    query_lower = query.lower()
+    if not query:
+        return None, "POI 未精确匹配，请传入 shop_id、完整店名或别名"
+
     for it in items:
-        if it.get("id") == poi:
-            return it
+        if str(it.get("id", "")).strip().lower() == query_lower:
+            return it, None
+
     for it in items:
-        name = it.get("name", "")
-        aliases = it.get("fields", {}).get("aliases", [])
-        if poi in name or name in poi or any(poi == a or poi in a for a in aliases):
-            return it
-    return None
+        name = str(it.get("name", "")).strip()
+        aliases = [str(a).strip() for a in it.get("fields", {}).get("aliases", [])]
+        if name.lower() == query_lower or any(alias.lower() == query_lower for alias in aliases):
+            return it, None
+
+    fuzzy = []
+    for it in items:
+        name = str(it.get("name", "")).strip()
+        aliases = [str(a).strip() for a in it.get("fields", {}).get("aliases", [])]
+        if query_lower in name.lower() or any(query_lower in alias.lower() for alias in aliases):
+            fuzzy.append(it)
+
+    if len(fuzzy) == 1:
+        return fuzzy[0], None
+    if len(fuzzy) > 1:
+        return None, "POI 未精确匹配，请传入 shop_id、完整店名或别名"
+    return None, None
 
 
 def _coupon_for(shop_id, t):
@@ -150,7 +168,10 @@ def query_business(poi, at=None):
 
     # 1) 餐厅：排队 + 券
     restaurants = _load("restaurants.json")
-    shop = _resolve(poi, restaurants.get("items", []))
+    shop, resolve_note = _resolve(poi, restaurants.get("items", []))
+    if resolve_note:
+        result["note"] = resolve_note
+        return result
     if shop is not None:
         machine = _build_for(shop["id"], restaurants)
         opentime = shop.get("fields", {}).get("opentime_today", "10:00-22:00")
@@ -166,7 +187,10 @@ def query_business(poi, at=None):
 
     # 2) 票务（影院等）：余票库存
     orders = _load("user_orders.json")
-    item = _resolve(poi, orders.get("items", []))
+    item, resolve_note = _resolve(poi, orders.get("items", []))
+    if resolve_note:
+        result["note"] = resolve_note
+        return result
     if item is not None:
         machine = _build_for(item["id"], orders)
         if machine is not None:
