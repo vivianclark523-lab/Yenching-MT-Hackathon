@@ -94,4 +94,3 @@ jobs:
         with:
           header: openclaw-touched
           path: /tmp/comment.md
-
