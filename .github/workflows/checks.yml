@@ -56,7 +56,7 @@ jobs:
         working-directory: ${{ github.workspace }}
 
   # ---------------------------------------------------------------------------
-  # Job 2: openclaw/ 是 vendored 上游代码，理论上不应该改。
+  # Job 3: openclaw/ 是 vendored 上游代码，理论上不应该改。
   # 如果 PR 改了它，发个警告评论（不阻断），让 reviewer 注意。
   # ---------------------------------------------------------------------------
   warn-on-openclaw-changes:
@@ -94,3 +94,4 @@ jobs:
         with:
           header: openclaw-touched
           path: /tmp/comment.md
+
